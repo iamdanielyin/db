@@ -9,11 +9,19 @@ import (
 	"reflect"
 )
 
+var DefaultLogger = &logger{}
+
 func init() {
+	SetJSONFormatter()
+}
+
+func SetJSONFormatter() {
 	logrus.SetFormatter(&logrus.JSONFormatter{})
 }
 
-var DefaultLogger = &logger{}
+func SetTextFormatter() {
+	logrus.SetFormatter(&logrus.TextFormatter{})
+}
 
 type ILogger interface {
 	PRINT(v ...interface{})

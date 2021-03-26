@@ -1,7 +1,6 @@
 package logger
 
 import (
-	"github.com/sirupsen/logrus"
 	"testing"
 )
 
@@ -16,13 +15,13 @@ var (
 )
 
 func TestINFO(t *testing.T) {
+	SetTextFormatter()
 	INFO("A group of walrus emerges from the ocean")
 	INFO("A group of walrus %s from the %s", "emerges", "ocean")
 	INFO(map[string]interface{}{"animal": "walrus", "size": 10}, "A group of walrus emerges from the ocean")
 	INFO(map[string]interface{}{"animal": "walrus", "size": 10}, "A group of walrus %s from the %s", "emerges", "ocean")
 
-	logrus.SetFormatter(&logrus.JSONFormatter{})
-
+	SetJSONFormatter()
 	INFO(one)
 	INFO(list)
 	INFO(one, "A group of walrus %s from the %s", "emerges", "ocean")
