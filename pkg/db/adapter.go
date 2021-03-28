@@ -6,6 +6,9 @@ type database struct {
 }
 
 func (d *database) Model(s string) IModel {
+	if d.target == nil {
+		d.target = DB()
+	}
 	m := d.target.Model(s)
 	return &model{target: m}
 }

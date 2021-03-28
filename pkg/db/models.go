@@ -22,7 +22,7 @@ type Metadata struct {
 	Name           string           `json:"name"`
 	NativeName     string           `json:"native_name"`
 	DisplayName    string           `json:"display_name"`
-	Fields         map[string]Field `json:"fields"`
+	Fields         map[string]Field `json:"fields" valid:"-"`
 }
 
 func (m *Metadata) NativeFields() map[string]Field {

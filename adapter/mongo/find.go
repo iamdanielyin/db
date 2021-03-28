@@ -3,8 +3,10 @@ package mongo
 import (
 	"context"
 	"fmt"
+	"github.com/yuyitech/db/internal/json"
 	"github.com/yuyitech/db/internal/reflectx"
 	"github.com/yuyitech/db/pkg/db"
+	"github.com/yuyitech/db/pkg/logger"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -44,13 +46,17 @@ func newFindResult(m *model, filter []interface{}) *findResult {
 		populates: make(map[string]*db.PopulateOptions),
 	}
 	if len(filter) > 0 {
-		result.filters = append(result.filters, filter...)
+		for _, item := range filter {
+			if item != nil {
+				result.filters = append(result.filters, item)
+			}
+		}
 	}
 	return result
 }
 
 func (f *findResult) Iterator() (db.Iterator, error) {
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Minute)
 	cur, err := f.buildCursor(f.ctx)
 	if err != nil {
 		return nil, err
@@ -63,10 +69,12 @@ func (f *findResult) Iterator() (db.Iterator, error) {
 }
 
 func where(filters []interface{}, meta db.Metadata) *bson.D {
-	return ParseFilter(func(cmp *db.Comparison) {
+	filter := ParseFilter(func(cmp *db.Comparison) {
 		field := meta.Fields[cmp.Key]
 		cmp.Key = field.MustNativeName()
-	}, filters)
+	}, filters...)
+	logger.INFO(json.Stringify(filter, false))
+	return filter
 }
 
 func pagination(page, size uint) (offset int64, limit int64) {
@@ -158,7 +166,7 @@ func (f *findResult) populateOne(ptrToStruct interface{}) {
 
 func (f *findResult) One(ptrToStruct interface{}) error {
 	filter := where(f.filters, f.meta)
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Minute)
 	f.err = f.coll.FindOne(ctx, *filter).Decode(ptrToStruct)
 	f.populateOne(ptrToStruct)
 	return f.err
@@ -288,7 +296,7 @@ func (f *findResult) populateAll(sliceOfStruct interface{}) {
 }
 
 func (f *findResult) All(sliceOfStruct interface{}) error {
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Minute)
 	cur, err := f.buildCursor(ctx)
 	if err != nil {
 		f.err = err
@@ -356,7 +364,7 @@ func (f *findResult) Populate(path string, options ...*db.PopulateOptions) db.IF
 }
 
 func (f *findResult) count(ignorePagination bool) (uint64, error) {
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Minute)
 	filter := where(f.filters, f.meta)
 
 	var (
@@ -383,7 +391,7 @@ func (f *findResult) Count() (uint64, error) {
 }
 
 func (f *findResult) Delete() (uint64, error) {
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Minute)
 	filter := where(f.filters, f.meta)
 
 	res, err := f.coll.DeleteMany(ctx, filter)
@@ -396,7 +404,7 @@ func (f *findResult) Delete() (uint64, error) {
 }
 
 func (f *findResult) Update(i interface{}) (uint64, error) {
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Minute)
 	filter := where(f.filters, f.meta)
 
 	res, err := f.coll.UpdateMany(ctx, filter, i)

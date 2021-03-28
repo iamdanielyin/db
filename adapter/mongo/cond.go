@@ -9,13 +9,16 @@ import (
 )
 
 func ParseFilter(frame func(*db.Comparison), filters ...interface{}) (bs *bson.D) {
-	bs = new(bson.D)
+	bs = &bson.D{}
 	for _, a := range filters {
 		switch v := a.(type) {
 		case db.Cond:
 			for _, item := range v.Comparisons(frame) {
 				parseComparison(&item, bs)
 			}
+		//case []interface{}:
+		//	sbs := ParseFilter(frame, v)
+		//	bs = sbs
 		case *db.Union:
 			var a bson.A
 			for _, filter := range v.Filters {

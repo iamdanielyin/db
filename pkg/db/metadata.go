@@ -152,7 +152,7 @@ func ParseMetadata(model interface{}) (*Metadata, error) {
 		for k, v := range fieldConfigs {
 			raw, has := fields[k]
 			if has {
-				if err := mergo.Merge(raw, v); err != nil {
+				if err := mergo.Merge(&raw, v); err != nil {
 					return nil, err
 				}
 				fields[k] = raw
