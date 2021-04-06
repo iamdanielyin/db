@@ -18,7 +18,7 @@ func (t *tx) Name() string {
 	return ""
 }
 
-func (t *tx) Model(s string) db.IModel {
+func (t *tx) Model(s string) db.Collection {
 	meta, has := db.Meta(s)
 	if !has {
 		return nil
@@ -30,7 +30,7 @@ func (t *tx) Model(s string) db.IModel {
 	}
 }
 
-func (t *tx) Query(sql string, args ...interface{}) db.IQuery {
+func (t *tx) Query(sql string, args ...interface{}) db.Query {
 	rows, err := t.tx.Query(sql, args...)
 	return &query{rows: rows, err: err}
 }

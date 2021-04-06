@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/yuyitech/db/internal/reflectx"
 	"github.com/yuyitech/db/pkg/db"
+	"github.com/yuyitech/db/pkg/schema"
 	"go.mongodb.org/mongo-driver/mongo"
 	"reflect"
 )
@@ -12,14 +13,14 @@ type model struct {
 	a    *adapter
 	db   *mongo.Database
 	coll *mongo.Collection
-	meta db.Metadata
+	meta schema.Metadata
 }
 
 func (m *model) Name() string {
 	return m.meta.Name
 }
 
-func (m *model) Metadata() db.Metadata {
+func (m *model) Metadata() schema.Metadata {
 	return m.meta
 }
 
@@ -57,11 +58,11 @@ func (m *model) Create(i interface{}) (interface{}, uint64, error) {
 	}
 }
 
-func (m *model) Find(filter ...interface{}) db.IFindResult {
+func (m *model) Find(filter ...interface{}) db.FindResult {
 	return newFindResult(m, filter)
 }
 
-func (m *model) Database() db.IDatabase {
+func (m *model) Database() db.Database {
 	return m.a
 }
 

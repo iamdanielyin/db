@@ -7,6 +7,7 @@ import (
 	"github.com/yuyitech/db/internal/reflectx"
 	"github.com/yuyitech/db/pkg/db"
 	"github.com/yuyitech/db/pkg/logger"
+	"github.com/yuyitech/db/pkg/schema"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -20,7 +21,7 @@ type findResult struct {
 	m    *model
 	a    *adapter
 	coll *mongo.Collection
-	meta db.Metadata
+	meta schema.Metadata
 
 	cur *mongo.Cursor
 	ctx context.Context
@@ -68,7 +69,7 @@ func (f *findResult) Iterator() (db.Iterator, error) {
 	}, err
 }
 
-func where(filters []interface{}, meta db.Metadata) *bson.D {
+func where(filters []interface{}, meta schema.Metadata) *bson.D {
 	filter := ParseFilter(func(cmp *db.Comparison) {
 		field := meta.Fields[cmp.Key]
 		cmp.Key = field.MustNativeName()
@@ -85,7 +86,7 @@ func pagination(page, size uint) (offset int64, limit int64) {
 	return
 }
 
-func projection(selects map[string]bool, meta db.Metadata) bson.M {
+func projection(selects map[string]bool, meta schema.Metadata) bson.M {
 	project := make(bson.M)
 	for k, v := range selects {
 		field := meta.Fields[k]
@@ -99,7 +100,7 @@ func projection(selects map[string]bool, meta db.Metadata) bson.M {
 	return project
 }
 
-func sort(orders map[string]bool, meta db.Metadata) bson.M {
+func sort(orders map[string]bool, meta schema.Metadata) bson.M {
 	sort := make(bson.M)
 	for k, v := range orders {
 		field := meta.Fields[k]
@@ -307,17 +308,17 @@ func (f *findResult) All(sliceOfStruct interface{}) error {
 	return f.err
 }
 
-func (f *findResult) Page(u uint) db.IFindResult {
+func (f *findResult) Page(u uint) db.FindResult {
 	f.page = u
 	return f
 }
 
-func (f *findResult) Size(u uint) db.IFindResult {
+func (f *findResult) Size(u uint) db.FindResult {
 	f.size = u
 	return f
 }
 
-func (f *findResult) Order(s ...string) db.IFindResult {
+func (f *findResult) Order(s ...string) db.FindResult {
 	for _, item := range s {
 		var descend bool
 		if strings.HasPrefix(item, "-") {
@@ -329,7 +330,7 @@ func (f *findResult) Order(s ...string) db.IFindResult {
 	return f
 }
 
-func (f *findResult) Select(s ...string) db.IFindResult {
+func (f *findResult) Select(s ...string) db.FindResult {
 	for _, item := range s {
 		sel := true
 		if strings.HasPrefix(item, "-") {
@@ -341,20 +342,20 @@ func (f *findResult) Select(s ...string) db.IFindResult {
 	return f
 }
 
-func (f *findResult) Where(filter interface{}) db.IFindResult {
+func (f *findResult) Where(filter interface{}) db.FindResult {
 	f.filters = append(f.filters, filter)
 	return f
 }
 
-func (f *findResult) And(filters ...db.Cond) db.IFindResult {
+func (f *findResult) And(filters ...db.Cond) db.FindResult {
 	return f.Where(db.And(filters...))
 }
 
-func (f *findResult) Or(filters ...db.Cond) db.IFindResult {
+func (f *findResult) Or(filters ...db.Cond) db.FindResult {
 	return f.Where(db.Or(filters...))
 }
 
-func (f *findResult) Populate(path string, options ...*db.PopulateOptions) db.IFindResult {
+func (f *findResult) Populate(path string, options ...*db.PopulateOptions) db.FindResult {
 	var opt *db.PopulateOptions
 	if len(options) > 0 && options[0] != nil {
 		opt = options[0]

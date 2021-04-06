@@ -4,22 +4,33 @@ import (
 	"fmt"
 	"github.com/asaskevich/govalidator"
 	"github.com/pkg/errors"
+	"github.com/yuyitech/db/pkg/cache"
 	"sync"
 )
 
 var dsCache *safeDataSourcesCache
-
-type safeDataSourcesCache struct {
-	l                 *sync.RWMutex
-	dataSourceMap     map[string]*DataSource
-	defaultDataSource *DataSource
-}
 
 func init() {
 	dsCache = &safeDataSourcesCache{
 		l:             new(sync.RWMutex),
 		dataSourceMap: make(map[string]*DataSource),
 	}
+}
+
+type DataSource struct {
+	db    Database
+	cache cache.ICache
+
+	Name      string `json:"name"`
+	Adapter   string `json:"adapter"`
+	DSN       string `json:"dsn"`
+	IsDefault bool   `json:"is_default"`
+}
+
+type safeDataSourcesCache struct {
+	l                 *sync.RWMutex
+	dataSourceMap     map[string]*DataSource
+	defaultDataSource *DataSource
 }
 
 func Connect(dataSource *DataSource) error {
@@ -79,7 +90,7 @@ func DisconnectAll() (err error) {
 	return
 }
 
-func DB(name ...string) IDatabase {
+func Session(name ...string) Database {
 	dsCache.l.RLock()
 	defer dsCache.l.RUnlock()
 
@@ -88,7 +99,7 @@ func DB(name ...string) IDatabase {
 		n = name[0]
 	}
 
-	var dd IDatabase
+	var dd Database
 	if n != "" {
 		if v, has := dsCache.dataSourceMap[n]; has && v != nil && v.db != nil {
 			dd = v.db

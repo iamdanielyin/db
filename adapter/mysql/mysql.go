@@ -6,6 +6,7 @@ import (
 	"github.com/yuyitech/db/adapter/sqladapter"
 	"github.com/yuyitech/db/adapter/sqladapter/sqlhelper"
 	"github.com/yuyitech/db/pkg/db"
+	"github.com/yuyitech/db/pkg/schema"
 	"gopkg.in/guregu/null.v4"
 	"strings"
 )
@@ -49,7 +50,7 @@ func nativeCollectionNames(common sqlhelper.SQLCommon, _ *db.DataSource) ([]stri
 	return names, nil
 }
 
-func nativeCollectionMetadata(common sqlhelper.SQLCommon, ds *db.DataSource) ([]db.Metadata, error) {
+func nativeCollectionMetadata(common sqlhelper.SQLCommon, ds *db.DataSource) ([]schema.Metadata, error) {
 	type table struct {
 		TableName    string `json:"TABLE_NAME"`
 		TableComment string `json:"TABLE_COMMENT"`
@@ -81,10 +82,10 @@ func nativeCollectionMetadata(common sqlhelper.SQLCommon, ds *db.DataSource) ([]
 	if err := sqlhelper.All(columnRows, &columns); err != nil {
 		return nil, err
 	}
-	fieldMap := make(map[string]map[string]db.Field)
+	fieldMap := make(map[string]map[string]schema.Field)
 	for _, item := range columns {
 		k := strings.ToUpper(item.ColumnKey.String)
-		f := db.Field{
+		f := schema.Field{
 			Name:         item.ColumnName,
 			NativeName:   item.ColumnName,
 			Description:  item.ColumnComment.String,
@@ -99,21 +100,21 @@ func nativeCollectionMetadata(common sqlhelper.SQLCommon, ds *db.DataSource) ([]
 
 		v := fieldMap[item.TableName]
 		if v == nil {
-			v = make(map[string]db.Field)
+			v = make(map[string]schema.Field)
 		}
 		v[f.Name] = f
 
 		fieldMap[item.TableName] = v
 	}
 	dsn := strings.ToUpper(ds.Name)
-	var metadata []db.Metadata
+	var metadata []schema.Metadata
 	for _, item := range tables {
 		name := fmt.Sprintf("%s%s", dsn, db.ConvertMetadataName(item.TableName))
 		for key, value := range fieldMap[item.TableName] {
 			value.MetadataName = name
 			fieldMap[item.TableName][key] = value
 		}
-		meta := db.Metadata{
+		meta := schema.Metadata{
 			Name:           name,
 			NativeName:     item.TableName,
 			DisplayName:    item.TableComment,

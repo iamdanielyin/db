@@ -1,13 +1,15 @@
 package db
 
+import "github.com/yuyitech/db/pkg/schema"
+
 type database struct {
-	target     IDatabase
+	target     Database
 	middleware *AdapterMiddleware
 }
 
-func (d *database) Model(s string) IModel {
+func (d *database) Model(s string) Collection {
 	if d.target == nil {
-		d.target = DB()
+		d.target = Session()
 	}
 	m := d.target.Model(s)
 	return &model{target: m}
@@ -17,7 +19,7 @@ func (d *database) Name() string {
 	return d.target.Name()
 }
 
-func (d *database) Query(s string, i ...interface{}) IQuery {
+func (d *database) Query(s string, i ...interface{}) Query {
 	return d.target.Query(s, i...)
 }
 
@@ -33,7 +35,7 @@ func (d *database) DriverName() string {
 	return d.target.DriverName()
 }
 
-func (d *database) Open(source *DataSource) (IDatabase, error) {
+func (d *database) Open(source *DataSource) (Database, error) {
 	return d.target.Open(source)
 }
 
@@ -45,11 +47,11 @@ func (d *database) NativeCollectionNames() ([]string, error) {
 	return d.target.NativeCollectionNames()
 }
 
-func (d *database) NativeCollectionMetadata() ([]Metadata, error) {
+func (d *database) NativeCollectionMetadata() ([]schema.Metadata, error) {
 	return d.target.NativeCollectionMetadata()
 }
 
-func (d *database) BeginTx() (ITx, error) {
+func (d *database) BeginTx() (Tx, error) {
 	t, err := d.target.BeginTx()
 	if err != nil {
 		return nil, err
@@ -58,18 +60,18 @@ func (d *database) BeginTx() (ITx, error) {
 }
 
 type model struct {
-	target IModel
+	target Collection
 }
 
 func (m *model) Name() string {
 	return m.target.Name()
 }
 
-func (m *model) Metadata() Metadata {
+func (m *model) Metadata() schema.Metadata {
 	return m.target.Metadata()
 }
 
-func (m *model) Database() IDatabase {
+func (m *model) Database() Database {
 	return m.target.Database()
 }
 func (m *model) Middleware() *AdapterMiddleware {
@@ -84,7 +86,7 @@ func (m *model) Create(i interface{}) (interface{}, uint64, error) {
 	return scope.OutputValue, scope.RecordsAffected, scope.Error
 }
 
-func (m *model) Find(i ...interface{}) IFindResult {
+func (m *model) Find(i ...interface{}) FindResult {
 	fr := m.target.Find(i...)
 	search := &findResult{target: fr, middleware: m.Middleware()}
 	scope := search.middleware.NewScope(m.target, nil)
@@ -94,10 +96,10 @@ func (m *model) Find(i ...interface{}) IFindResult {
 }
 
 type tx struct {
-	target ITx
+	target Tx
 }
 
-func (t *tx) Model(s string) IModel {
+func (t *tx) Model(s string) Collection {
 	m := t.target.Model(s)
 	if m != nil {
 		return &model{target: m}
@@ -109,7 +111,7 @@ func (t *tx) Name() string {
 	return t.target.Name()
 }
 
-func (t *tx) Query(s string, i ...interface{}) IQuery {
+func (t *tx) Query(s string, i ...interface{}) Query {
 	return t.target.Query(s, i...)
 }
 func (t *tx) Exec(s string, i ...interface{}) (interface{}, uint64, error) {
@@ -131,34 +133,34 @@ func (t *tx) Commit() error {
 type findResult struct {
 	scope      *AdapterMiddlewareScope
 	middleware *AdapterMiddleware
-	target     IFindResult
+	target     FindResult
 }
 
-func (f *findResult) Page(u uint) IFindResult {
+func (f *findResult) Page(u uint) FindResult {
 	return f.target.Page(u)
 }
 
-func (f *findResult) Size(u uint) IFindResult {
+func (f *findResult) Size(u uint) FindResult {
 	return f.target.Size(u)
 }
 
-func (f *findResult) Order(s ...string) IFindResult {
+func (f *findResult) Order(s ...string) FindResult {
 	return f.target.Order(s...)
 }
 
-func (f *findResult) Select(s ...string) IFindResult {
+func (f *findResult) Select(s ...string) FindResult {
 	return f.target.Select(s...)
 }
 
-func (f *findResult) Where(i interface{}) IFindResult {
+func (f *findResult) Where(i interface{}) FindResult {
 	return f.target.Where(i)
 }
 
-func (f *findResult) And(cond ...Cond) IFindResult {
+func (f *findResult) And(cond ...Cond) FindResult {
 	return f.target.And(cond...)
 }
 
-func (f *findResult) Or(cond ...Cond) IFindResult {
+func (f *findResult) Or(cond ...Cond) FindResult {
 	return f.target.Or(cond...)
 }
 
@@ -182,7 +184,7 @@ func (f *findResult) All(sliceOfStruct interface{}) error {
 	return scope.Error
 }
 
-func (f *findResult) Populate(s string, options ...*PopulateOptions) IFindResult {
+func (f *findResult) Populate(s string, options ...*PopulateOptions) FindResult {
 	return f.target.Populate(s, options...)
 }
 

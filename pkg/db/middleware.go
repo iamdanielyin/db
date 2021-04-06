@@ -19,7 +19,7 @@ func (m *AdapterMiddleware) clone() *AdapterMiddleware {
 		processors: m.processors,
 	}
 }
-func (m *AdapterMiddleware) NewScope(model IModel, v interface{}) *AdapterMiddlewareScope {
+func (m *AdapterMiddleware) NewScope(model Collection, v interface{}) *AdapterMiddlewareScope {
 	return &AdapterMiddlewareScope{model: model, InputValue: v}
 }
 

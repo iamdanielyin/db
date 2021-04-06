@@ -1,8 +1,10 @@
 package db
 
+import "github.com/yuyitech/db/pkg/schema"
+
 type AdapterMiddlewareScope struct {
-	model    IModel
-	tx       ITx
+	model    Collection
+	tx       Tx
 	skipLeft bool
 
 	InputValue      interface{}
@@ -13,7 +15,7 @@ type AdapterMiddlewareScope struct {
 
 	dst         interface{}
 	queryAction interface{}
-	search      IFindResult
+	search      FindResult
 }
 
 func (scope *AdapterMiddlewareScope) SkipLeft() {
@@ -24,7 +26,7 @@ func (scope *AdapterMiddlewareScope) HasError() bool {
 	return scope.Error != nil
 }
 
-func (scope *AdapterMiddlewareScope) FieldByName(name string) (field Field, ok bool) {
+func (scope *AdapterMiddlewareScope) FieldByName(name string) (field schema.Field, ok bool) {
 	field, ok = scope.model.Metadata().Fields[name]
 	return
 }
@@ -41,12 +43,12 @@ func (scope *AdapterMiddlewareScope) CallHooks(hookName string) {
 	}
 }
 
-func (scope *AdapterMiddlewareScope) PrimaryFields() []Field {
+func (scope *AdapterMiddlewareScope) PrimaryFields() []schema.Field {
 	meta := scope.model.Metadata()
 	return (&meta).PrimaryFields()
 }
 
-func (scope *AdapterMiddlewareScope) PrimaryField() *Field {
+func (scope *AdapterMiddlewareScope) PrimaryField() *schema.Field {
 	if primaryFields := scope.PrimaryFields(); len(primaryFields) > 0 {
 		if len(primaryFields) > 0 {
 			return &(scope.PrimaryFields()[0])

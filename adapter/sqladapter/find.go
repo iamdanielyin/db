@@ -8,6 +8,7 @@ import (
 	"github.com/yuyitech/db/internal/reflectx"
 	"github.com/yuyitech/db/internal/templatex"
 	"github.com/yuyitech/db/pkg/db"
+	"github.com/yuyitech/db/pkg/schema"
 	"math"
 	"reflect"
 	"strings"
@@ -17,7 +18,7 @@ type findResult struct {
 	m      *model
 	a      *adapter
 	common sqlhelper.SQLCommon
-	meta   db.Metadata
+	meta   schema.Metadata
 
 	rows *sql.Rows
 
@@ -59,7 +60,7 @@ func newFindResult(m *model, filter []interface{}) *findResult {
 	return result
 }
 
-func where(filters []interface{}, meta db.Metadata) (string, []interface{}) {
+func where(filters []interface{}, meta schema.Metadata) (string, []interface{}) {
 	var (
 		buffer bytes.Buffer
 		attrs  []interface{}
@@ -86,7 +87,7 @@ func where(filters []interface{}, meta db.Metadata) (string, []interface{}) {
 	return buffer.String(), attrs
 }
 
-func orderBy(orders map[string]bool, meta db.Metadata) string {
+func orderBy(orders map[string]bool, meta schema.Metadata) string {
 	var (
 		buffer bytes.Buffer
 		i      int
@@ -117,7 +118,7 @@ func pagination(page, size uint) (offset uint, limit uint) {
 	return
 }
 
-func columns(selects map[string]bool, meta db.Metadata) string {
+func columns(selects map[string]bool, meta schema.Metadata) string {
 	var (
 		buffer bytes.Buffer
 		i      int
@@ -364,17 +365,17 @@ func (f *findResult) Iterator() (db.Iterator, error) {
 	}, err
 }
 
-func (f *findResult) Page(u uint) db.IFindResult {
+func (f *findResult) Page(u uint) db.FindResult {
 	f.page = u
 	return f
 }
 
-func (f *findResult) Size(u uint) db.IFindResult {
+func (f *findResult) Size(u uint) db.FindResult {
 	f.size = u
 	return f
 }
 
-func (f *findResult) Order(s ...string) db.IFindResult {
+func (f *findResult) Order(s ...string) db.FindResult {
 	for _, item := range s {
 		var descend bool
 		if strings.HasPrefix(item, "-") {
@@ -386,27 +387,27 @@ func (f *findResult) Order(s ...string) db.IFindResult {
 	return f
 }
 
-func (f *findResult) Select(s ...string) db.IFindResult {
+func (f *findResult) Select(s ...string) db.FindResult {
 	for _, item := range s {
 		f.selects[item] = true
 	}
 	return f
 }
 
-func (f *findResult) Where(filter interface{}) db.IFindResult {
+func (f *findResult) Where(filter interface{}) db.FindResult {
 	f.filters = append(f.filters, filter)
 	return f
 }
 
-func (f *findResult) And(filters ...db.Cond) db.IFindResult {
+func (f *findResult) And(filters ...db.Cond) db.FindResult {
 	return f.Where(db.And(filters...))
 }
 
-func (f *findResult) Or(filters ...db.Cond) db.IFindResult {
+func (f *findResult) Or(filters ...db.Cond) db.FindResult {
 	return f.Where(db.Or(filters...))
 }
 
-func (f *findResult) Populate(path string, options ...*db.PopulateOptions) db.IFindResult {
+func (f *findResult) Populate(path string, options ...*db.PopulateOptions) db.FindResult {
 	var opt *db.PopulateOptions
 	if len(options) > 0 && options[0] != nil {
 		opt = options[0]

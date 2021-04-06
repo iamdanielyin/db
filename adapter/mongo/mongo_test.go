@@ -15,7 +15,7 @@ func init() {
 }
 
 func TestAdapter_NativeCollectionMetadata(t *testing.T) {
-	meta, err := db.DB("tm").NativeCollectionMetadata()
+	meta, err := db.Session("tm").NativeCollectionMetadata()
 	if err != nil {
 		t.Error(err)
 		return
@@ -24,7 +24,7 @@ func TestAdapter_NativeCollectionMetadata(t *testing.T) {
 }
 
 func Test_adapter_NativeCollectionNames(t *testing.T) {
-	names, err := db.DB().NativeCollectionNames()
+	names, err := db.Session().NativeCollectionNames()
 	if err != nil {
 		t.Error(err)
 		return

@@ -3,6 +3,7 @@ package mongo
 import (
 	"context"
 	"github.com/yuyitech/db/pkg/db"
+	"github.com/yuyitech/db/pkg/schema"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -30,12 +31,12 @@ func (a *adapter) NativeCollectionNames() ([]string, error) {
 	return nativeCollectionNames(a.db())
 }
 
-func (a *adapter) NativeCollectionMetadata() ([]db.Metadata, error) {
+func (a *adapter) NativeCollectionMetadata() ([]schema.Metadata, error) {
 	// MongoDB无本地结构
-	return make([]db.Metadata, 0), nil
+	return make([]schema.Metadata, 0), nil
 }
 
-func (a *adapter) Model(s string) db.IModel {
+func (a *adapter) Model(s string) db.Collection {
 	meta, has := db.Meta(s)
 	if !has {
 		return nil
@@ -52,7 +53,7 @@ func (a *adapter) Name() string {
 	return a.defaultDBName
 }
 
-func (a *adapter) Query(s string, i ...interface{}) db.IQuery {
+func (a *adapter) Query(s string, i ...interface{}) db.Query {
 	return &query{
 		db:   a.db(),
 		cmd:  s,
@@ -73,7 +74,7 @@ func (a *adapter) DataSource() *db.DataSource {
 	return a.ds
 }
 
-func (a *adapter) Open(source *db.DataSource) (db.IDatabase, error) {
+func (a *adapter) Open(source *db.DataSource) (db.Database, error) {
 	cs, err := connstring.Parse(source.DSN)
 	if err != nil {
 		return nil, err
@@ -99,7 +100,7 @@ func (a *adapter) Close() error {
 	return a.client.Disconnect(context.Background())
 }
 
-func (a *adapter) BeginTx() (db.ITx, error) {
+func (a *adapter) BeginTx() (db.Tx, error) {
 	sess, err := a.client.StartSession(options.Session())
 	if err != nil {
 		return nil, err

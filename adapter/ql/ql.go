@@ -6,6 +6,7 @@ import (
 	"github.com/yuyitech/db/adapter/sqladapter"
 	"github.com/yuyitech/db/adapter/sqladapter/sqlhelper"
 	"github.com/yuyitech/db/pkg/db"
+	"github.com/yuyitech/db/pkg/schema"
 	"net/url"
 	"strings"
 )
@@ -42,7 +43,7 @@ func nativeCollectionNames(common sqlhelper.SQLCommon, ds *db.DataSource) ([]str
 	return nil, nil
 }
 
-func nativeCollectionMetadata(common sqlhelper.SQLCommon, ds *db.DataSource) ([]db.Metadata, error) {
+func nativeCollectionMetadata(common sqlhelper.SQLCommon, ds *db.DataSource) ([]schema.Metadata, error) {
 	return nil, nil
 }
 

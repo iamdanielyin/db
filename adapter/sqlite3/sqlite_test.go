@@ -15,7 +15,7 @@ func init() {
 }
 
 func TestAdapter_NativeCollectionMetadata(t *testing.T) {
-	meta, err := db.DB("drone").NativeCollectionMetadata()
+	meta, err := db.Session("drone").NativeCollectionMetadata()
 	if err != nil {
 		t.Error(err)
 		return

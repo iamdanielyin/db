@@ -5,6 +5,7 @@ import (
 	"github.com/yuyitech/db/adapter/sqladapter/sqlhelper"
 	"github.com/yuyitech/db/internal/templatex"
 	"github.com/yuyitech/db/pkg/db"
+	"github.com/yuyitech/db/pkg/schema"
 	"reflect"
 	"strings"
 )
@@ -12,7 +13,7 @@ import (
 type model struct {
 	a      *adapter
 	common sqlhelper.SQLCommon
-	meta   db.Metadata
+	meta   schema.Metadata
 }
 
 func (m *model) Create(i interface{}) (interface{}, uint64, error) {
@@ -100,7 +101,7 @@ func (m *model) Create(i interface{}) (interface{}, uint64, error) {
 	return lastInsertId, uint64(rowsAffected), nil
 }
 
-func (m *model) Find(filter ...interface{}) db.IFindResult {
+func (m *model) Find(filter ...interface{}) db.FindResult {
 	return newFindResult(m, filter)
 }
 
@@ -108,11 +109,11 @@ func (m *model) Name() string {
 	return m.meta.Name
 }
 
-func (m *model) Metadata() db.Metadata {
+func (m *model) Metadata() schema.Metadata {
 	return m.meta
 }
 
-func (m *model) Database() db.IDatabase {
+func (m *model) Database() db.Database {
 	return m.a
 }
 

@@ -16,7 +16,7 @@ func (t *tx) db() *mongo.Database {
 	return (*t.sess).Client().Database(t.a.defaultDBName)
 }
 
-func (t *tx) Model(s string) db.IModel {
+func (t *tx) Model(s string) db.Collection {
 	meta, has := db.Meta(s)
 	if !has {
 		return nil
@@ -33,7 +33,7 @@ func (t *tx) Name() string {
 	return t.a.defaultDBName
 }
 
-func (t *tx) Query(s string, i ...interface{}) db.IQuery {
+func (t *tx) Query(s string, i ...interface{}) db.Query {
 	return &query{
 		db:   t.db(),
 		cmd:  s,

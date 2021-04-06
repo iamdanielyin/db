@@ -5,6 +5,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/yuyitech/db/internal/json"
 	"github.com/yuyitech/db/pkg/db"
+	"github.com/yuyitech/db/pkg/schema"
 	"gopkg.in/guregu/null.v4"
 	"os"
 	"testing"
@@ -20,7 +21,7 @@ func init() {
 }
 
 func TestAdapter_NativeCollectionMetadata(t *testing.T) {
-	meta, err := db.DB("test").NativeCollectionMetadata()
+	meta, err := db.Session("test").NativeCollectionMetadata()
 	if err != nil {
 		t.Error(err)
 		return
@@ -34,7 +35,7 @@ func TestExecResult_All(t *testing.T) {
 		CreatedAt time.Time `json:"created_at"`
 		Mobile    string    `json:"mobile"`
 	}
-	query := db.DB("test").Query("SELECT * FROM hyg_Freelancer")
+	query := db.Session("test").Query("SELECT * FROM hyg_Freelancer")
 	if err := query.All(&all); err != nil {
 		t.Error(err)
 		return
@@ -49,7 +50,7 @@ func TestExecResult_One(t *testing.T) {
 		Mobile       string    `json:"mobile"`
 		SignNotified null.Bool `json:"sign_notified"`
 	}
-	query := db.DB("test").Query("SELECT * FROM hyg_Freelancer")
+	query := db.Session("test").Query("SELECT * FROM hyg_Freelancer")
 	if err := query.One(&one); err != nil {
 		t.Error(err)
 		return
@@ -202,7 +203,7 @@ func TestFindResult_Populate(t *testing.T) {
 		DefaultSecret secret    `json:"defaultSecret"`
 	}
 	meta, _ := db.Meta("TESTSysUser")
-	meta.RegisterFields(map[string]db.Field{
+	meta.RegisterFields(map[string]schema.Field{
 		"secrets": {
 			MetadataName:             "TESTSysUser",
 			Name:                     "secrets",

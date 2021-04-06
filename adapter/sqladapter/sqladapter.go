@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"github.com/yuyitech/db/adapter/sqladapter/sqlhelper"
 	"github.com/yuyitech/db/pkg/db"
+	"github.com/yuyitech/db/pkg/schema"
 )
 
 type adapter struct {
@@ -15,7 +16,7 @@ type adapter struct {
 
 type AdapterFuncs struct {
 	NativeCollectionNames    func(sqlhelper.SQLCommon, *db.DataSource) ([]string, error)
-	NativeCollectionMetadata func(sqlhelper.SQLCommon, *db.DataSource) ([]db.Metadata, error)
+	NativeCollectionMetadata func(sqlhelper.SQLCommon, *db.DataSource) ([]schema.Metadata, error)
 	Name                     func(sqlhelper.SQLCommon, *db.DataSource) string
 	DriverName               func() string
 }
@@ -31,7 +32,7 @@ func (a *adapter) NativeCollectionNames() ([]string, error) {
 	return nil, nil
 }
 
-func (a *adapter) NativeCollectionMetadata() ([]db.Metadata, error) {
+func (a *adapter) NativeCollectionMetadata() ([]schema.Metadata, error) {
 	if a.fns.NativeCollectionMetadata != nil {
 		return a.fns.NativeCollectionMetadata(a.db, a.ds)
 	}
@@ -52,7 +53,7 @@ func (a *adapter) DriverName() string {
 	return ""
 }
 
-func (a *adapter) BeginTx() (db.ITx, error) {
+func (a *adapter) BeginTx() (db.Tx, error) {
 	t, err := a.db.BeginTx(context.Background(), &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
 		return nil, err
@@ -64,7 +65,7 @@ func (a *adapter) DB() *sql.DB {
 	return a.db
 }
 
-func (a *adapter) Model(s string) db.IModel {
+func (a *adapter) Model(s string) db.Collection {
 	meta, has := db.Meta(s)
 	if !has {
 		return nil
@@ -76,7 +77,7 @@ func (a *adapter) Model(s string) db.IModel {
 	}
 }
 
-func (a *adapter) Query(sql string, args ...interface{}) db.IQuery {
+func (a *adapter) Query(sql string, args ...interface{}) db.Query {
 	rows, err := a.db.Query(sql, args...)
 	return &query{rows: rows, err: err}
 }
@@ -100,7 +101,7 @@ func (a *adapter) DataSource() *db.DataSource {
 	return a.ds
 }
 
-func (a *adapter) Open(source *db.DataSource) (db.IDatabase, error) {
+func (a *adapter) Open(source *db.DataSource) (db.Database, error) {
 	ins, err := sql.Open(source.Adapter, source.DSN)
 	if err != nil {
 		return nil, err

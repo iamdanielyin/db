@@ -6,6 +6,7 @@ import (
 	"github.com/yuyitech/db/adapter/sqladapter"
 	"github.com/yuyitech/db/adapter/sqladapter/sqlhelper"
 	"github.com/yuyitech/db/pkg/db"
+	"github.com/yuyitech/db/pkg/schema"
 	"gopkg.in/guregu/null.v4"
 	"net/url"
 	"strings"
@@ -58,7 +59,7 @@ func nativeCollectionNames(common sqlhelper.SQLCommon, ds *db.DataSource) ([]str
 	return names, nil
 }
 
-func nativeCollectionMetadata(common sqlhelper.SQLCommon, ds *db.DataSource) ([]db.Metadata, error) {
+func nativeCollectionMetadata(common sqlhelper.SQLCommon, ds *db.DataSource) ([]schema.Metadata, error) {
 	tableNames, err := nativeCollectionNames(common, ds)
 
 	if err != nil {
@@ -67,7 +68,7 @@ func nativeCollectionMetadata(common sqlhelper.SQLCommon, ds *db.DataSource) ([]
 
 	var (
 		dsn      = strings.ToUpper(ds.Name)
-		metadata []db.Metadata
+		metadata []schema.Metadata
 	)
 
 	type column struct {
@@ -89,10 +90,10 @@ func nativeCollectionMetadata(common sqlhelper.SQLCommon, ds *db.DataSource) ([]
 		}
 		var (
 			metadataName = fmt.Sprintf("%s%s", dsn, db.ConvertMetadataName(tableName))
-			fields       = make(map[string]db.Field)
+			fields       = make(map[string]schema.Field)
 		)
 		for _, item := range columns {
-			field := &db.Field{
+			field := &schema.Field{
 				MetadataName: metadataName,
 				Name:         item.ColumnName,
 				NativeName:   item.ColumnName,
@@ -104,7 +105,7 @@ func nativeCollectionMetadata(common sqlhelper.SQLCommon, ds *db.DataSource) ([]
 			}
 			fields[field.Name] = *field
 		}
-		metadata = append(metadata, db.Metadata{
+		metadata = append(metadata, schema.Metadata{
 			Name:           metadataName,
 			NativeName:     tableName,
 			DataSourceName: ds.Name,
