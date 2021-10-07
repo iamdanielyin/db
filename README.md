@@ -3,7 +3,7 @@
 import "github.com/yuyitech/db"
 
 type Member struct {
-	FirstName string
+    FirstName string
     LastName  string
 }
 
@@ -190,10 +190,10 @@ db.RegisterMetadata("test", db.Metadata{
 })
 ```
 
-- `Trim `- 表示对字符串进行空格裁剪，支持传入`both`、`start`、`end`三个值；
-- `Required `- 表示该字段不允许为空，传入`true`时，表示该字段必填；当传入`+字段名`格式时，表示当指定字段不为空时必填；传入其他值时表示分组名称，组内所有字段为多选一必填（即设置相同值的所有字段不能全部为空）；
+- `Trim` - 表示对字符串进行空格裁剪，支持传入`both`、`start`、`end`三个值；
+- `Required` - 表示该字段不允许为空，传入`true`时，表示该字段必填；当传入`+字段名`格式时，表示当指定字段不为空时必填；传入其他值时表示分组名称，组内所有字段为多选一必填（即设置相同值的所有字段不能全部为空）；
 - `Unique` - 表示该字段唯一，传入`true`时，表示该字段唯一。
-- `DefaultValue `- 表示该字段默认值，当传入`$now`时，表示取当前时间的Unix时间戳。
+- `DefaultValue` - 表示该字段默认值，当传入`$now`时，表示取当前时间的Unix时间戳。
 ## 传入结构体
 为简化配置，以下属性推荐使用简写配置：
 
