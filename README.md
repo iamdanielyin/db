@@ -1,3 +1,52 @@
+<a name="zTrhs"></a>
+# 目录
+- [快速开始](#ZH38i)
+- [数据源](#RiEEy)
+- [元数据](#cm6b7)
+   - [传入Metadata](#n4teo)
+   - [传入结构体](#p5do1)
+- [新增](#S75Ro)
+   - [单个新增](#qn1U7)
+   - [批量新增](#BW1TR)
+- [查询](#MDT4w)
+   - [单个查询](#aucZe)
+   - [列表查询](#LXaih)
+   - [迭代查询](#oKG1I)
+   - [条件查询](#pXhaf)
+      - [字符串运算符](#KbWQr)
+      - [数值运算符](#yAytk)
+      - [范围运算符](#thJKJ)
+      - [存在运算符](#RPGBz)
+      - [逻辑运算符](#w1OQt)
+   - [数量查询](#jGzY2)
+   - [分页查询](#viDrv)
+   - [排序查询](#AhP9Z)
+- [修改](#usHdi)
+   - [单个修改](#s8Ylo)
+   - [批量修改](#cBYBK)
+- [删除](#nWBSo)
+   - [单个删除](#lXp0m)
+   - [批量删除](#MtLe7)
+   - [逻辑删除](#Rnlna)
+   - [物理删除](#SKYEm)
+- [事务](#yGnyc)
+   - [StartTransaction](#cixqD)
+   - [WithTransaction](#FnqFR)
+- [本地化脚本](#OMeK7)
+   - [查询类脚本](#ks9it)
+   - [执行类脚本](#FJJWr)
+- [中间件](#PRphn)
+   - [CRUD中间件](#L8OPY)
+   - [字段中间件](#iEvuC)
+- [元数据关联](#htZqq)
+   - [关系定义](#inKDt)
+   - [元数据定义](#edQl8)
+   - [引用联查](#hn3OE)
+   - [引用修改](#B0tvR)
+      - [引用新增](#QVMkd)
+      - [引用修改](#xx3Gi)
+      - [引用删除](#QCOMf)
+<a name="ZH38i"></a>
 # 快速开始
 ```go
 package main
@@ -62,6 +111,7 @@ func main() {
 	_ = sess.Disconnect()
 }
 ```
+<a name="RiEEy"></a>
 # 数据源
 连接数据源：
 ```go
@@ -83,6 +133,7 @@ sess.Disconnect()
 ```go
 db.Disconnect()
 ```
+<a name="cm6b7"></a>
 # 元数据
 注册元数据：
 ```go
@@ -93,6 +144,7 @@ sess.RegisterMetadata(...)
 db.RegisterMetadata('test', ...)
 ```
 注意：结构体名称需要**全局唯一**，`RegisterMetadata`支持传入**Metadata**和**结构体指针**两种格式。
+<a name="n4teo"></a>
 ## 传入Metadata
 ```go
 db.RegisterMetadata("test", db.Metadata{
@@ -199,6 +251,7 @@ db.RegisterMetadata("test", db.Metadata{
 - `Required` - 表示该字段不允许为空，传入`true`时，表示该字段必填；当传入`+字段名`格式时，表示当指定字段不为空时必填；传入其他值时表示分组名称，组内所有字段为多选一必填（即设置相同值的所有字段不能全部为空）；
 - `Unique` - 表示该字段唯一，传入`true`时，表示该字段唯一。
 - `DefaultValue` - 表示该字段默认值，当传入`$now`时，表示取当前时间的Unix时间戳。
+<a name="p5do1"></a>
 ## 传入结构体
 为简化配置，以下属性推荐使用简写配置：
 
@@ -232,8 +285,10 @@ func (u *User) Metadata() db.Metadata {
 db.RegisterMetadata('test', &User{})
 ```
 注意：默认使用结构体名称（以上为`User`）作为元数据名称，也可以通过实现`Metadata`函数来覆盖自动解析生成的任意属性。
+<a name="S75Ro"></a>
 # 新增
 支持单个新增和批量新增两种。
+<a name="qn1U7"></a>
 ## 单个新增
 ```go
 res, _ := db.Model('User').InsertOne(User{
@@ -243,6 +298,7 @@ res, _ := db.Model('User').InsertOne(User{
 
 fmt.Println(res.StringID) // 5326bfc0e6f780b21635248f
 ```
+<a name="BW1TR"></a>
 ## 批量新增
 ```go
 res, _ := db.Model('User').InsertMany([]User{
@@ -263,17 +319,21 @@ res, _ := db.Model('User').InsertMany([]User{
 
 fmt.Println(res.StringIDs) // [5326bfc0e6f780b21635248f, 2094bfc0e6f780b21635938d, 9287bfc0e6f780b216350129t]
 ```
+<a name="MDT4w"></a>
 # 查询
+<a name="aucZe"></a>
 ## 单个查询
 ```go
 var user User
 _ = db.Model("User").Find().One(&user)
 ```
+<a name="LXaih"></a>
 ## 列表查询
 ```go
 var users []User
 _ = db.Model("User").Find().All(&users)
 ```
+<a name="oKG1I"></a>
 ## 迭代查询
 大数据量场景下，推荐使用迭代查询：
 ```go
@@ -285,6 +345,7 @@ for cur.HasNext() {
     users = append(users, user)
 }
 ```
+<a name="pXhaf"></a>
 ## 条件查询
 `Find`函数支持传入`db.Cond`进行条件查询：
 ```go
@@ -311,6 +372,7 @@ db.Model("User").Find(db.Cond{
 - `$in` - 包含在指定数组内
 - `$nin` - 不包含在指定数组内
 - `$exists` - 是否存在
+<a name="KbWQr"></a>
 ### 字符串运算符
 ```go
 // 表示查询 EmailAddress 以“foo”开头的数据
@@ -328,6 +390,7 @@ db.Cond{"EmailAddress =~": "/example/igm"}
 // 表示查询 EmailAddress 不包含“example”的数据
 db.Cond{"EmailAddress !~": "/example/igm"}
 ```
+<a name="yAytk"></a>
 ### 数值运算符
 ```go
 // 表示查询 Status 为“1”的数据
@@ -348,6 +411,7 @@ db.Cond{"Status <": 0}
 // 表示查询 Status 小于等于“0”的数据
 db.Cond{"Status <=": 0}
 ```
+<a name="thJKJ"></a>
 ### 范围运算符
 ```go
 // 表示查询 “Status IN (1, -1, -2)” 的数据
@@ -371,6 +435,7 @@ db.And(
     db.Cond{"Status": 1},
 )
 ```
+<a name="RPGBz"></a>
 ### 存在运算符
 ```go
 // 表示查询 PhoneNumber 字段存在且不为空的数据（类似于PhoneNumber IS NOT NULL）
@@ -379,6 +444,7 @@ db.Cond{"PhoneNumber $exists": true}
 // 表示查询 PhoneNumber 字段不存在或值为空的数据（类似于PhoneNumber IS NULL）
 db.Cond{"PhoneNumber $exists": false}
 ```
+<a name="w1OQt"></a>
 ### 逻辑运算符
 ```go
 // 表示查询 “Username = "foo" OR Username = "bar"” 的数据
@@ -396,10 +462,12 @@ db.Or(
     db.Cond{"EmailAddress $exists": true},
 )
 ```
+<a name="jGzY2"></a>
 ## 数量查询
 ```go
 count, _ := db.Model("User").Find().Count()
 ```
+<a name="viDrv"></a>
 ## 分页查询
 ```go
 // 按10条每页分页
@@ -417,6 +485,7 @@ recordCount, _ := p.TotalRecords()
 // 查询所有页数
 pageCount, _ := p.TotalPages()
 ```
+<a name="AhP9Z"></a>
 ## 排序查询
 ```go
 // 单个字段排序（“-”开头表示逆序）
@@ -428,6 +497,7 @@ db.Model("User".Find().OrderBy("-CreatedAt").OrderBy("Status").All()
 // 多个字段排序：方式二
 db.Model("User".Find().OrderBy([]string{"-CreatedAt", "Status"}).All()
 ```
+<a name="usHdi"></a>
 # 修改
 支持单个修改和批量修改两种，修改语法如下：
 ```go
@@ -439,6 +509,7 @@ if err != nil {
 res.OK              // 执行是否成功：true
 res.RecordsAffected // 受影响记录数：1
 ```
+<a name="s8Ylo"></a>
 ## 单个修改
 ```go
 // 传入结构体进行查询和修改
@@ -477,6 +548,7 @@ type User struct {
 	EmailAddress null.String `db:"dn=邮箱地址;rqd=contact"`
 }
 ```
+<a name="cBYBK"></a>
 ## 批量修改
 ```go
 // 更新所有记录的 Status 的值为“1”
@@ -484,6 +556,7 @@ db.Model("User").Find().UpdateMany(&User{
     Status: 1,
 })
 ```
+<a name="nWBSo"></a>
 # 删除
 支持单个删除和批量删除两种，删除语法如下：
 ```go
@@ -495,6 +568,7 @@ if err != nil {
 res.OK              // 执行是否成功：true
 res.RecordsAffected // 受影响记录数：1
 ```
+<a name="lXp0m"></a>
 ## 单个删除
 ```go
 // 删除 ID 为“1”的数据
@@ -503,6 +577,7 @@ db.Model("User").Find(&User{ID: "1"}).DeleteOne()
 // 删除 ID 为“1”的数据
 db.Model("User".Find(db.Cond{"ID": "1"}).DeleteOne()
 ```
+<a name="MtLe7"></a>
 ## 批量删除
 ```go
 // 删除 “Username = "foo" OR Username = "bar"” 的数据
@@ -511,6 +586,7 @@ db.Model("User".Find(db.Or(
     db.Cond{"Username": "bar"},
 )).DeleteMany()
 ```
+<a name="Rnlna"></a>
 ## 逻辑删除
 框架自带对逻辑删除的支持，但使用前需要注册逻辑删除规则。
 ```go
@@ -545,6 +621,7 @@ db.RegisterLogicDeleteRule("User", db.LogicDeleteRule{
    - `$bool(v)` - 格式化v为布尔类型；
    - `$string(v)` - 格式化v为字符串类型。
 - `GetValue`可接收`db.Cond`、`db.And`或`db.Or`类型数据。
+<a name="SKYEm"></a>
 ## 物理删除
 支持在`Find`以后链式调用`Unscoped`函数忽略**所有逻辑删除规则**。
 ```go
@@ -554,8 +631,10 @@ db.Model("User").Find().Unscoped().RemoveOne()
 // 批量物理删除
 db.Model("User").Find().Unscoped().RemoveMany()
 ```
+<a name="yGnyc"></a>
 # 事务
 支持`StartTransaction`和`WithTransaction`两种方式。
+<a name="cixqD"></a>
 ## StartTransaction
 需手动调用`Commit`或`Rollback`：
 ```go
@@ -574,6 +653,7 @@ if err := tx.Commit(); err != nil {
     tx.Rollback()
 }
 ```
+<a name="FnqFR"></a>
 ## WithTransaction
 框架根据返回的`error`判断自动`Commit`还是`Rollback`：
 ```go
@@ -593,8 +673,10 @@ db.Session("test").WithTransaction(func(tx) error {
     ...
 })
 ```
+<a name="OMeK7"></a>
 # 本地化脚本
 支持查询类脚本和执行类脚本两种，查询类脚本返回查询对象，执行类脚本返回执行结果、受影响记录数等。
+<a name="ks9it"></a>
 ## 查询类脚本
 SQL类脚本：
 ```go
@@ -633,6 +715,7 @@ q, _ := db.Raw("test", `
     }
 `).Query()
 ```
+<a name="FJJWr"></a>
 ## 执行类脚本
 ```go
 res, _ := db.Raw("test", ...).Exec()
@@ -642,8 +725,10 @@ res, _ := db.Session("test").Raw(...).Exec()
 res.OK
 res.RecordsAffected
 ```
+<a name="PRphn"></a>
 # 中间件
 包含元数据中间件（CRUD中间件）和字段中间件两种。
+<a name="L8OPY"></a>
 ## CRUD中间件
 默认支持的中间件列表如下：
 
@@ -706,6 +791,7 @@ db.RegisterMiddleware("User:beforeCreate", func(scope *db.Scope) error {
    - `DeleteManyResult` - 批量删除执行结果；
    - `Skip()` - 跳过后续所有中间件的执行；
    - `HasError()` - 当前调用链中是否包含错误。
+<a name="iEvuC"></a>
 ## 字段中间件
 字段中间件和元数据中间件的注册语法很像，只需要多添加一个`:`符号传入字段名即可，其余用法与元数据中间件完全一致：
 ```go
@@ -735,6 +821,7 @@ db.RegisterMiddleware("User:beforeUpdate:PhoneNumber|EmailAddress", func(scope *
    - `insert-xxx` - 匹配`InsertDocs`；
    - `update-xxx` - 匹配`UpdateDoc`；
    - `delete-xxx` - 匹配`Conds`。
+<a name="htZqq"></a>
 # 元数据关联
 在常见的ORM框架中，我们常常听到以下几种关联关系：
 
@@ -744,6 +831,7 @@ db.RegisterMiddleware("User:beforeUpdate:PhoneNumber|EmailAddress", func(scope *
 - 多对多
 
 这几种关联关系对于新手来说往往难以理解，建模时经常会不知所措。但不论判断哪种关联关系，一定要先确定参照物，就像你和你爸的关系，站在你爸的角度，他叫你儿子，站在你的角度，你叫他爸爸，不同的角度下的叫法也是不同的。
+<a name="inKDt"></a>
 ## 关系定义
 为方便理解，我们针对以上概念稍加转换，分理出以下四种关联关系（其本质上是一样的）：
 
@@ -753,6 +841,7 @@ db.RegisterMiddleware("User:beforeUpdate:PhoneNumber|EmailAddress", func(scope *
 - **引用多个**（Reference Many）：你关联多样东西，且这些东西都并不只属于你，其他人也可以关联，你对它们都没有修改权（多对多）。
 
 上面提到的**修改权**的概念，简单记住就好，后面会详细描述它的作用。
+<a name="edQl8"></a>
 ## 元数据定义
 接着我们创建几个元数据来描述以上四种关系：
 
@@ -805,6 +894,7 @@ db.RegisterMetadata("test", &User{}, &IDCard{}, &BankCard{}, &Company{}, &Projec
 
 - `hasOne`、`hasMany`、`refOne`值的配置规则为`引用元数据.外键名,当前主键名`，其中`引用元数据`的配置是可选的，默认使用当前字段类型的结构体名称作为引用元数据名称。
 - `refMany`值的配置规则为`中间表名称,中间表中的当前主键字段名:当前主键字段名,中间表中的引用主键字段名:引用元数据.引用主键字段名`，其中`当前主键字段名`和`引用元数据.引用主键字段名`的配置是可选的。
+<a name="hn3OE"></a>
 ## 引用联查
 引用联查表示的是在查询主表数据时，可以通过一句命令即可快速查询出被关联的数据。
 ```go
@@ -813,8 +903,10 @@ db.Model("User").Find().Populate("BankCards").All()
 db.Model("User").Find().Populate("Company,Projects").All()
 db.Model("User").Find().Populate("Company").Populate("Projects").All()
 ```
+<a name="B0tvR"></a>
 ## 引用修改
 引用修改指的是在对主表数据进行**增删改**时，也可以同时对引用档案进行**增删改**。<br />上述提到的**修改权**在这里就体现出来了：框架底层约定，只有当你**拥有**某样东西时才对引用数据具备修改权，也就是引用修改仅限于`hasOne`和`hasMany`。
+<a name="QVMkd"></a>
 ### 引用新增
 当传入的引用档案无主键时，将自动新增引用档案并维护引用关系：
 ```go
@@ -846,6 +938,7 @@ db.Model("User").InsertOne(&User{
 
 1. 新增`User`记录；
 1. 自动更新`IDCard`中的`UserID`。
+<a name="xx3Gi"></a>
 ### 引用修改
 当传入的引用档案除主键外，还指定了别的值，则会自动更新引用档案并维护引用关系：
 ```go
@@ -877,6 +970,7 @@ db.Model("User").Find(db.Cond{"ID": "100"}).UpdateOne(&User{
 
 1. 修改`User`中`ID`为“100”的`RealName`值为“Daniel Wu”；
 1. 更新`IDCard`中`ID`为“1”且`UserID`为“100”字段的值为空。
+<a name="QCOMf"></a>
 ### 引用删除
 如果需要删除**引用档案**，则需要使用特殊符号`$del`：
 ```go
