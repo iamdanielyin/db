@@ -59,7 +59,7 @@ func main() {
 	db.Model("Member").Find(db.Cond{"FirstName": "Daniel"}).DeleteOne()
 
 	// 关闭连接
-	_ = sess.Close()
+	_ = sess.Disconnect()
 }
 ```
 # 数据源
@@ -77,11 +77,11 @@ sess := db.Session('test')
 ```
 关闭单个连接：
 ```go
-sess.Close()
+sess.Disconnect()
 ```
 关闭所有连接：
 ```go
-db.CloseAll()
+db.Disconnect()
 ```
 # 元数据
 注册元数据：
