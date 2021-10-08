@@ -1,66 +1,71 @@
 # 快速开始
 ```go
-import "github.com/yuyitech/db"
+package main
+
+import (
+	"fmt"
+	"github.com/yuyitech/db"
+)
 
 type Member struct {
-    FirstName string
-    LastName  string
+	FirstName string
+	LastName  string
 }
 
 func main() {
-    // 连接数据源
-    sess, err := db.Connect(db.DataSource{
-        Name: 'test',
-        Adapter: 'mongo',
-        URI: 'mongodb://admin:123456@localhost/test'
-    })
-    if err != nil {
-        panic("连接失败！")
-    }
-    
-    // 注册元数据
+	// 连接数据源
+	sess, err := db.Connect(db.DataSource{
+		Name:    "test",
+		Adapter: "mongo",
+		URI:     "mongodb://admin:123456@localhost/test",
+	})
+	if err != nil {
+		panic("连接失败！")
+	}
+
+	// 注册元数据
 	sess.RegisterMetadata(&Member{})
-    
-    // 新增数据
-    res, _ := db.Model("Member").InsertMany([]Member{
-        {
-            FirstName: "Eason",
-        	LastName: "Chan"
-        },
-        {
-            FirstName: "Daniel",
-        	LastName: "Wu"
-        },
-        {
-            FirstName: "Steve",
-        	LastName: "Jobs"
-        }
-    })
-    fmt.Println(res.StringIDs)
-    
-    // 查询数据
-    var member Member
-    db.Model("Member").Find(db.Cond{ "FirstName": "Eason" }).One(&member)
-    
-    var members []Member
-    db.Model("Member").Find().All(&members)
-    
-    // 修改数据
-    db.Model("Member").Find(db.Cond{ "FirstName": "Daniel" }).UpdateOne(&Member{
-        LastName: "Yin"
-    })
-    
-    // 删除数据
-    db.Model("Member").Find(db.Cond{ "FirstName": "Daniel" }).DeleteOne()
-    
-    // 关闭连接
-    _ = sess.Close()
+
+	// 新增数据
+	res, _ := db.Model("Member").InsertMany([]Member{
+		{
+			FirstName: "Eason",
+			LastName:  "Chan",
+		},
+		{
+			FirstName: "Daniel",
+			LastName:  "Wu",
+		},
+		{
+			FirstName: "Steve",
+			LastName:  "Jobs",
+		},
+	})
+	fmt.Println(res.StringIDs)
+
+	// 查询数据
+	var member Member
+	db.Model("Member").Find(db.Cond{"FirstName": "Eason"}).One(&member)
+
+	var members []Member
+	db.Model("Member").Find().All(&members)
+
+	// 修改数据
+	db.Model("Member").Find(db.Cond{"FirstName": "Daniel"}).UpdateOne(&Member{
+		LastName: "Yin",
+	})
+
+	// 删除数据
+	db.Model("Member").Find(db.Cond{"FirstName": "Daniel"}).DeleteOne()
+
+	// 关闭连接
+	_ = sess.Close()
 }
 ```
 # 数据源
 连接数据源：
 ```go
-_, _ = db.Connect(db.DataSource{
+db.Connect(db.DataSource{
     Name: 'test',
     Adapter: 'mongo',
     URI: 'mongodb://admin:123456@localhost/test'
@@ -72,11 +77,11 @@ sess := db.Session('test')
 ```
 关闭单个连接：
 ```go
-_ = sess.Close()
+sess.Close()
 ```
 关闭所有连接：
 ```go
-_ = db.CloseAll()
+db.CloseAll()
 ```
 # 元数据
 注册元数据：
@@ -91,102 +96,102 @@ db.RegisterMetadata('test', ...)
 ## 传入Metadata
 ```go
 db.RegisterMetadata("test", db.Metadata{
-    Name: "User",
+    Name:        "User",
     DisplayName: "用户",
     Properties: db.Fields{
         "ID": db.Field{
-            Type: db.String,
-            PrimaryKey: "true",
+            Type:        db.String,
+            PrimaryKey:  "true",
             DisplayName: "数据唯一ID",
-            Description: "系统自动生成"
+            Description: "系统自动生成",
         },
         "Username": db.Field{
-            Type: db.String,
+            Type:        db.String,
             DisplayName: "用户名",
             Description: "不允许重复",
-            Trim: "both",
-            Required: "true",
-            Unique: "true"
+            Trim:        "both",
+            Required:    "true",
+            Unique:      "true",
         },
         "Password": db.Field{
-            Type: db.Password,
+            Type:        db.Password,
             DisplayName: "密码",
             Description: "加密存储",
-            Trim: "both"
+            Trim:        "both",
         },
         "Nickname": db.Field{
-            Type: db.String,
+            Type:        db.String,
             DisplayName: "昵称",
-            Trim: "both"
+            Trim:        "both",
         },
         "Avatar": db.Field{
-            Type: db.String,
-            DisplayName: "头像"
+            Type:        db.String,
+            DisplayName: "头像",
         },
         "Gender": db.Field{
-            Type: db.String,
+            Type:        db.String,
             DisplayName: "性别",
             Enum: db.Enum{
                 db.EnumItem{
                     Label: "男",
-                    Value: "male"
+                    Value: "male",
                 },
                 db.EnumItem{
                     Label: "女",
-                    Value: "female"
+                    Value: "female",
                 },
                 db.EnumItem{
                     Label: "未知",
-                    Value: "unknown"
+                    Value: "unknown",
                 },
             },
-            DefaultValue: "unknown"
+            DefaultValue: "unknown",
         },
         "Status": db.Field{
-            Type: db.Int,
+            Type:        db.Int,
             DisplayName: "用户状态",
             Enum: db.Enum{
                 db.EnumItem{
                     Label: "正常",
-                    Value: 1
+                    Value: 1,
                 },
                 db.EnumItem{
                     Label: "已禁用",
-                    Value: -1
+                    Value: -1,
                 },
                 db.EnumItem{
                     Label: "审核中",
-                    Value: -2
+                    Value: -2,
                 },
             },
-            DefaultValue: 1
+            DefaultValue: 1,
         },
         "DenyLogin": db.Field{
-            Type: db.Bool,
-            DisplayName: "禁止登录"
+            Type:        db.Bool,
+            DisplayName: "禁止登录",
         },
         "CountryCode": db.Field{
-            Type: db.String,
+            Type:        db.String,
             DisplayName: "国家/地区代码",
-            Required: "+PhoneNumber"
+            Required:    "+PhoneNumber",
         },
         "PhoneNumber": db.Field{
-            Type: db.String,
+            Type:        db.String,
             DisplayName: "手机号码",
             Description: "不含国家/地区代码",
-            Required: "contact"
+            Required:    "contact",
         },
         "EmailAddress": db.Field{
-            Type: db.String,
+            Type:        db.String,
             DisplayName: "邮箱地址",
-            Required: "contact"
+            Required:    "contact",
         },
         "CreatedAt": db.Field{
-            Type: db.Timestamp,
-            DisplayName: "注册时间",
-            DefaultValue: "$now"
-        }
-    }
+            Type:         db.Timestamp,
+            DisplayName:  "注册时间",
+            DefaultValue: "$now",
+        },
+    },
 })
 ```
 
@@ -215,13 +220,13 @@ type User struct {
 	CountryCode  string `db:"dn=国家/地区代码;rqd=+PhoneNumber"`
 	PhoneNumber  string `db:"dn=手机号码;desc=不含国家/地区代码;rqd=contact"`
 	EmailAddress string `db:"dn=邮箱地址;rqd=contact"`
-    CreatedAt    int    `db:"dn=注册时间;default=$now"`
+	CreatedAt    int    `db:"dn=注册时间;default=$now"`
 }
 
-func(u *User) Metadata() db.Metadata {
-    return db.Metadata{
-        DisplayName: "用户"
-    }
+func (u *User) Metadata() db.Metadata {
+	return db.Metadata{
+		DisplayName: "用户",
+	}
 }
 
 db.RegisterMetadata('test', &User{})
@@ -232,8 +237,8 @@ db.RegisterMetadata('test', &User{})
 ## 单个新增
 ```go
 res, _ := db.Model('User').InsertOne(User{
-    Username: "foo",
-    EmailAddress: "foo@example.com"
+    Username:     "foo",
+    EmailAddress: "foo@example.com",
 })
 
 fmt.Println(res.StringID) // 5326bfc0e6f780b21635248f
@@ -242,18 +247,18 @@ fmt.Println(res.StringID) // 5326bfc0e6f780b21635248f
 ```go
 res, _ := db.Model('User').InsertMany([]User{
     {
-        Username: "foo",
-    	EmailAddress: "foo@example.com"
+        Username:     "foo",
+        EmailAddress: "foo@example.com",
     },
     {
-        Username: "bar",
-    	EmailAddress: "bar@example.com"
+        Username:     "bar",
+        EmailAddress: "bar@example.com",
     },
     {
-        Username: "foobar",
+        Username:    "foobar",
         CountryCode: "86",
-    	PhoneNumber: "13800138000"
-    }
+        PhoneNumber: "13800138000",
+    },
 })
 
 fmt.Println(res.StringIDs) // [5326bfc0e6f780b21635248f, 2094bfc0e6f780b21635938d, 9287bfc0e6f780b216350129t]
@@ -262,18 +267,18 @@ fmt.Println(res.StringIDs) // [5326bfc0e6f780b21635248f, 2094bfc0e6f780b21635938
 ## 单个查询
 ```go
 var user User
-_ = db.Model('User').Find().One(&user)
+_ = db.Model("User").Find().One(&user)
 ```
 ## 列表查询
 ```go
 var users []User
-_ = db.Model('User').Find().All(&users)
+_ = db.Model("User").Find().All(&users)
 ```
 ## 迭代查询
 大数据量场景下，推荐使用迭代查询：
 ```go
 var users []User
-cur, _ := db.Model('User').Find().Cursor()
+cur, _ := db.Model("User").Find().Cursor()
 for cur.HasNext() {
     var user User
     _ = cur.Next(&user)
@@ -283,11 +288,11 @@ for cur.HasNext() {
 ## 条件查询
 `Find`函数支持传入`db.Cond`进行条件查询：
 ```go
-db.Model('User').Find(db.Cond{
-    "Status": 1,
+db.Model("User").Find(db.Cond{
+    "Status":       1,
     "DenyLogin !=": false,
-    "Username": "foo",
-    "EmailAddress": "foo@example.com"
+    "Username":     "foo",
+    "EmailAddress": "foo@example.com",
 })
 ```
 `db.Cond`为`Map`结构，其中`Key`支持传入`字段名 运算符`格式，支持的运算符列表如下
@@ -309,97 +314,96 @@ db.Model('User').Find(db.Cond{
 ### 字符串运算符
 ```go
 // 表示查询 EmailAddress 以“foo”开头的数据
-db.Cond{ "EmailAddress *=": "foo" }
+db.Cond{"EmailAddress *=": "foo"}
 
 // 表示查询 EmailAddress 以“example.com”结尾的数据
-db.Cond{ "EmailAddress =*": "example.com" }
+db.Cond{"EmailAddress =*": "example.com"}
 
 // 表示查询 EmailAddress 包含“example”的数据
-db.Cond{ "EmailAddress *": "example" }
+db.Cond{"EmailAddress *": "example"}
 
 // 表示查询 EmailAddress 包含“example”的数据
-db.Cond{ "EmailAddress =~": "/example/igm" }
+db.Cond{"EmailAddress =~": "/example/igm"}
 
 // 表示查询 EmailAddress 不包含“example”的数据
-db.Cond{ "EmailAddress !~": "/example/igm" }
+db.Cond{"EmailAddress !~": "/example/igm"}
 ```
 ### 数值运算符
 ```go
 // 表示查询 Status 为“1”的数据
-db.Cond{ "Status": 1 } // 等价于db.Cond{ "Status =": 1 }
+db.Cond{"Status": 1} // 等价于db.Cond{ "Status =": 1 }
 
 // 表示查询 Status 不为“1”的数据
-db.Cond{ "Status !=": 1 }
+db.Cond{"Status !=": 1}
 
 // 表示查询 Status 大于“0”的数据
-db.Cond{ "Status >": 0 }
+db.Cond{"Status >": 0}
 
 // 表示查询 Status 大于等于“1”的数据
-db.Cond{ "Status >=": 1 }
+db.Cond{"Status >=": 1}
 
 // 表示查询 Status 小于“0”的数据
-db.Cond{ "Status <": 0 }
+db.Cond{"Status <": 0}
 
 // 表示查询 Status 小于等于“0”的数据
-db.Cond{ "Status <=": 0 }
+db.Cond{"Status <=": 0}
 ```
 ### 范围运算符
 ```go
 // 表示查询 “Status IN (1, -1, -2)” 的数据
-db.Cond{ "Status $in": []int{1, -1, -2} }
+db.Cond{"Status $in": []int{1, -1, -2}}
 
 // 表示查询 “Status NOT IN (-1, -2)” 的数据
-db.Cond{ "Status $nin": []int{-1, -2} }
+db.Cond{"Status $nin": []int{-1, -2}}
 
 // 表示查询 “CreatedAt >= 1633536000 AND CreatedAt <= 1633622399” 的数据
 db.And(
-    db.Cond{ "CreatedAt >=": 1633536000 },
-    db.Cond{ "CreatedAt <=": 1633622399 }
+    db.Cond{"CreatedAt >=": 1633536000},
+    db.Cond{"CreatedAt <=": 1633622399},
 )
 
 // 表示查询 “(Username = "foo" OR Username = "bar") AND Status = 1” 的数据
 db.And(
     db.Or(
-        db.Cond{ "Username": "foo" },
-        db.Cond{ "Username": "bar" },
+        db.Cond{"Username": "foo"},
+        db.Cond{"Username": "bar"},
     ),
-    db.Cond{ "Status": 1 }
+    db.Cond{"Status": 1},
 )
 ```
 ### 存在运算符
 ```go
 // 表示查询 PhoneNumber 字段存在且不为空的数据（类似于PhoneNumber IS NOT NULL）
-db.Cond{ "PhoneNumber $exists": true }
-
+db.Cond{"PhoneNumber $exists": true}
 
 // 表示查询 PhoneNumber 字段不存在或值为空的数据（类似于PhoneNumber IS NULL）
-db.Cond{ "PhoneNumber $exists": false }
+db.Cond{"PhoneNumber $exists": false}
 ```
 ### 逻辑运算符
 ```go
 // 表示查询 “Username = "foo" OR Username = "bar"” 的数据
 db.And(
-    db.Cond{ "Username": "foo" },
-    db.Cond{ "Username": "bar" }
+    db.Cond{"Username": "foo"},
+    db.Cond{"Username": "bar"},
 )
 
 // 表示查询 “(CountryCode = "86" AND PhoneNumber = "13800138000") OR (EmailAddress IS NOT NULL)” 的数据
 db.Or(
     db.And(
-        db.Cond{ "CountryCode": "86" },
-        db.Cond{ "PhoneNumber": "13800138000" },
+        db.Cond{"CountryCode": "86"},
+        db.Cond{"PhoneNumber": "13800138000"},
     ),
-    db.Cond{ "EmailAddress $exists": true }
+    db.Cond{"EmailAddress $exists": true},
 )
 ```
 ## 数量查询
 ```go
-count, _ := db.Model('User').Find().Count()
+count, _ := db.Model("User").Find().Count()
 ```
 ## 分页查询
 ```go
 // 按10条每页分页
-p := db.Model('User').Find().Paginate(10)
+p := db.Model("User").Find().Paginate(10)
 
 // 查询第1页数据
 p.All()
@@ -416,13 +420,13 @@ pageCount, _ := p.TotalPages()
 ## 排序查询
 ```go
 // 单个字段排序（“-”开头表示逆序）
-db.Model('User'.Find().OrderBy('-Status').All()
-         
+db.Model("User".Find().OrderBy("-Status").All()
+
 // 多个字段排序：方式一
-db.Model('User'.Find().OrderBy('-CreatedAt').OrderBy('Status').All()
+db.Model("User".Find().OrderBy("-CreatedAt").OrderBy("Status").All()
 
 // 多个字段排序：方式二
-db.Model('User'.Find().OrderBy([]string{'-CreatedAt', 'Status'}).All()
+db.Model("User".Find().OrderBy([]string{"-CreatedAt", "Status"}).All()
 ```
 # 修改
 支持单个修改和批量修改两种，修改语法如下：
@@ -431,29 +435,28 @@ res, err := db.Model("User").Find(...).UpdateXxx(...)
 if err != nil {
     panic("修改失败")
 }
-// 执行是否成功：true
-fmt.Println(res.OK)
-// 受影响记录数：1
-fmt.Println(res.RecordsAffected)
+
+res.OK              // 执行是否成功：true
+res.RecordsAffected // 受影响记录数：1
 ```
 ## 单个修改
 ```go
 // 传入结构体进行查询和修改
-db.Model("User").Find(&User{ ID: "1" }).UpdateOne(&User{
-    Nickname: "Foo"，
-    Status: 1
+db.Model("User").Find(&User{ID: "1"}).UpdateOne(&User{
+	Nickname: "Foo",
+	Status:   1,
 })
 
 // 传入Cond进行查询、传入结构体进行修改   
-db.Model('User'.Find(db.Cond{ "ID": "1" }).UpdateOne(&User{
-    Nickname: "Foo"，
-    Status: 1
+db.Model('User'.Find(db.Cond{"ID": "1"}).UpdateOne(&User{
+	Nickname: "Foo",
+	Status:   1,
 })
 
 // 传入Cond进行查询、传入Map进行修改
-db.Model('User'.Find(db.Cond{ "ID": "1" }).UpdateOne(db.D{
-    "Nickname": "Foo"，
-    "Status": 1
+db.Model('User'.Find(db.Cond{"ID": "1"}).UpdateOne(db.D{
+	"Nickname": "Foo",
+	"Status":   1,
 })
 ```
 注意：虽然`Find`和`Update`均支持传入结构体，但由于 Go 语言本身无法区分空值和零值的情况（在 Go 中，每个基础类型在未初始化时都对应一个零值：布尔类型是 `false `，整型和浮点型都是 `0` ，字符串是`""`），框架底层将自动忽略所有值为`nil`、`0`、`false`、`""`的字段，所以使用结构体注册元数据时，可允许为空的字段，推荐使用[https://github.com/guregu/null](https://github.com/guregu/null)包进行类型声明。
@@ -478,7 +481,7 @@ type User struct {
 ```go
 // 更新所有记录的 Status 的值为“1”
 db.Model("User").Find().UpdateMany(&User{
-    Status: 1
+    Status: 1,
 })
 ```
 # 删除
@@ -488,25 +491,24 @@ res, err := db.Model("User").Find(...).DeleteXxx()
 if err != nil {
     panic("修改失败")
 }
-// 执行是否成功：true
-fmt.Println(res.OK)
-// 受影响记录数：1
-fmt.Println(res.RecordsAffected)
+
+res.OK              // 执行是否成功：true
+res.RecordsAffected // 受影响记录数：1
 ```
 ## 单个删除
 ```go
 // 删除 ID 为“1”的数据
-db.Model("User").Find(&User{ ID: "1" }).DeleteOne()
+db.Model("User").Find(&User{ID: "1"}).DeleteOne()
 
 // 删除 ID 为“1”的数据
-db.Model('User'.Find(db.Cond{ "ID": "1" }).DeleteOne()
+db.Model("User".Find(db.Cond{"ID": "1"}).DeleteOne()
 ```
 ## 批量删除
 ```go
 // 删除 “Username = "foo" OR Username = "bar"” 的数据
-db.Model('User'.Find(db.Or(
-    db.Cond{ "Username": "foo" },
-    db.Cond{ "Username": "bar" }
+db.Model("User".Find(db.Or(
+    db.Cond{"Username": "foo"},
+    db.Cond{"Username": "bar"},
 )).DeleteMany()
 ```
 ## 逻辑删除
@@ -514,35 +516,35 @@ db.Model('User'.Find(db.Or(
 ```go
 // 针对所有元数据设置全局规则（全局优先级最低）
 db.RegisterLogicDeleteRule("*", db.LogicDeleteRule{
-    Field: "DeletedAt",
+    Field:    "DeletedAt",
     SetValue: "$now",
-    GetValue: db.Cond{ "DeletedAt $exists": false }
+    GetValue: db.Cond{"DeletedAt $exists": false},
 })
 
 // 针对某一组元数据设置规则（组规则优于全局规则）
 db.RegisterLogicDeleteRule("Acc*", db.LogicDeleteRule{
-    Field: "IsDeleted",
+    Field:    "IsDeleted",
     SetValue: "$int(1)",
-    GetValue: db.Cond{ "DeletedAt !=": 1 }
+    GetValue: db.Cond{"DeletedAt !=": 1},
 })
 
 // 针对单个元数据设置规则（元数据规则高于组规则）
 db.RegisterLogicDeleteRule("User", db.LogicDeleteRule{
-    Field: "DeletedAt",
+    Field:    "DeletedAt",
     SetValue: "$now",
-    GetValue: db.Cond{ "DeletedAt $exists": false }
+    GetValue: db.Cond{"DeletedAt $exists": false},
 })
 ```
 注意：
 
-- `RegisterLoginDeleteRule`第一个参数为Glob语法，参考[https://github.com/gobwas/glob](https://github.com/gobwas/glob)；
-- 规则优先级`元数据规格 > 组规则 > 全局规则`；
+- `RegisterLoginDeleteRule`第一个参数为Glob语法（具体用法请参考[https://github.com/gobwas/glob](https://github.com/gobwas/glob)）；
+- 每个元数据只会有**一条**规则生效，规则优先级为`元数据规则 > 组规则 > 全局规则`；
 - `SetValue`的可选值如下：
    - `$now` - 当前时间Unix时间戳；
    - `$int(v)` - 格式化v为整型类型；
    - `$bool(v)` - 格式化v为布尔类型；
    - `$string(v)` - 格式化v为字符串类型。
-- `GetValue`可接收`db.Cond`、`db.And`或`db.Or`。
+- `GetValue`可接收`db.Cond`、`db.And`或`db.Or`类型数据。
 ## 物理删除
 支持在`Find`以后链式调用`Unscoped`函数忽略**所有逻辑删除规则**。
 ```go
@@ -564,29 +566,30 @@ tx, _ := db.Session("test").StartTransaction()
 
 // 事务内的各种数据库操作
 tx.Model("User").Find()
-tx.Model("User").Find(&User{ ID: "1" }).Update(&User{ Status: 1 })
-tx.Model("User").Find(&User{ Username: "foo" }).Update(&User{ Nickname: "Foo" })
+tx.Model("User").Find(&User{ID: "1"}).Update(&User{Status: 1})
+tx.Model("User").Find(&User{Username: "foo"}).Update(&User{Nickname: "Foo"})
 
 // 提交或回滚事务
 if err := tx.Commit(); err != nil {
-    tx.Rollback();
+    tx.Rollback()
 }
 ```
 ## WithTransaction
+框架根据返回的`error`判断自动`Commit`还是`Rollback`：
 ```go
-db.WithTransaction("test", func(tx) err {
+db.WithTransaction("test", func(tx) error {
     tx.Model("User").Find()
-    if _, err := tx.Model("User").Find(&User{ ID: "1" }).Update(&User{ Status: 1 }); err != nil {
+    if _, err := tx.Model("User").Find(&User{ID: "1"}).Update(&User{Status: 1}); err != nil {
         return err
     }
-    if _, err := tx.Model("User").Find(&User{ Username: "foo" }).Update(&User{ Nickname: "Foo" }); err != nil {
+    if _, err := tx.Model("User").Find(&User{Username: "foo"}).Update(&User{Nickname: "Foo"}); err != nil {
         return err
     }
     return nil
 })
 
 // 等价于
-db.Session("test").WithTransaction(func(tx) err {
+db.Session("test").WithTransaction(func(tx) error {
     ...
 })
 ```
@@ -632,7 +635,7 @@ q, _ := db.Raw("test", `
 ```
 ## 执行类脚本
 ```go
-res, _ := db.Raw("test", ``).Exec()
+res, _ := db.Raw("test", ...).Exec()
 // 等价于
 res, _ := db.Session("test").Raw(...).Exec()
 
@@ -680,7 +683,7 @@ db.RegisterMiddleware("User:beforeCreate", func(scope *db.Scope) error {
 - 所有中间件均会执行，执行顺序从先到后排列为`全局中间件>分组中间件>元数据中间件`；
 - 传入参数`scope`的重要属性或方法的含义如下：
    - `Session` - 当前操作使用的连接会话；
-   - `Metadata `- 当前元数据；
+   - `Metadata` - 当前元数据；
    - `Conds` - 当前操作关联的所有查询条件；
    - `Action` - 当前数据库操作；
       - `insert-one`
@@ -690,12 +693,12 @@ db.RegisterMiddleware("User:beforeCreate", func(scope *db.Scope) error {
       - `delete-one`
       - `delete-many`
       - `find`
-   - `OrderBys` - 排序参数
-   - `Paginate` - 分页条数
-   - `PageNum` - 当前页码
+   - `OrderBys` - 排序参数；
+   - `Paginate` - 分页条数；
+   - `PageNum` - 当前页码；
    - `InsertDocs` - 新增的数据，Map数组结构；
-   - `InsertOneResult`
-   - `InsertManyResult`
+   - `InsertOneResult` - 单个新增结果；
+   - `InsertManyResult` - 批量新增结果；
    - `UpdateDoc` - 修改的数据，Map结构；
    - `UpdateOneResult` - 单个修改执行结果；
    - `UpdateManyResult` - 批量修改执行结果；
@@ -728,7 +731,7 @@ db.RegisterMiddleware("User:beforeUpdate:PhoneNumber|EmailAddress", func(scope *
    - 仅传入单个字段名：表示仅指定字段发生变化时触发；
    - 传入多个字段名，以英文逗号`,`分隔：表示仅指定的所有字段均发生变化时触发；
    - 传入多个字段名，以英文竖线`|`分隔：表示指定的所有字段中某一个发生变化时触发。
-- 字段规则在不同CRUD操作时（`scope.Action`）匹配的位置不同：
+- 字段规则在不同CRUD操作时匹配的位置不同：
    - `insert-xxx` - 匹配`InsertDocs`；
    - `update-xxx` - 匹配`UpdateDoc`；
    - `delete-xxx` - 匹配`Conds`。
@@ -740,18 +743,16 @@ db.RegisterMiddleware("User:beforeUpdate:PhoneNumber|EmailAddress", func(scope *
 - 多对一
 - 多对多
 
-这几种关联关系对于新手来说往往难以理解，建模时经常会不知所措。<br />​
-
-首先，不论判断哪种关联关系，一定要选定参照物，就像你和你爸的关系，站在你爸的角度，他叫你儿子，站在你的角度，你叫他爸爸，所以站在不同的角度去分析结果也是不同的。
+这几种关联关系对于新手来说往往难以理解，建模时经常会不知所措。但不论判断哪种关联关系，一定要先确定参照物，就像你和你爸的关系，站在你爸的角度，他叫你儿子，站在你的角度，你叫他爸爸，不同的角度下的叫法也是不同的。
 ## 关系定义
-所以为方便理解，我们针对以上概念稍加转换，分理出以下四种关联关系（其本质上是一样的）：
+为方便理解，我们针对以上概念稍加转换，分理出以下四种关联关系（其本质上是一样的）：
 
 - **拥有一个**（Has One）：你拥有一样东西，且那样东西只属于你，同时你对它拥有修改权（一对一）；
 - **拥有多个**（Has Many）：你拥有多样东西，且每样东西只属于你，同时你对它们都拥有修改权（站在你的角度是一对多，站在对方角度是多对一）；
 - **引用一个**（Reference One）：你关联一样东西，但这样东西并不只属于你，其他人也可以关联，你对它没有修改权（站在你的角度是多对一，站在对方角度是一对多）；
 - **引用多个**（Reference Many）：你关联多样东西，且这些东西都并不只属于你，其他人也可以关联，你对它们都没有修改权（多对多）。
 
-上面还提到一个**修改权**的概念，这里简单记住就好，后面会详细说明。
+上面提到的**修改权**的概念，简单记住就好，后面会详细描述它的作用。
 ## 元数据定义
 接着我们创建几个元数据来描述以上四种关系：
 
@@ -798,7 +799,7 @@ type Project struct {
 }
 
 // 注册所有元数据
-db.RegisterMetadata('test', &User{}, &IDCard{}, &BankCard{}, &Company{}, &Project{})
+db.RegisterMetadata("test", &User{}, &IDCard{}, &BankCard{}, &Company{}, &Project{})
 ```
 注意：
 
@@ -820,8 +821,8 @@ db.Model("User").Find().Populate("Company").Populate("Projects").All()
 db.Model("User").InsertOne(&User{
     RealName: "Eason Chan",
     IDCard: &IDCard{
-        CardNum: "440783197410208373"
-    }
+        CardNum: "440783197410208373",
+    },
 })
 ```
 以上代码将在同一事务中依次执行以下操作：
@@ -837,8 +838,8 @@ db.Model("User").InsertOne(&User{
 db.Model("User").InsertOne(&User{
     RealName: "Eason Chan",
     IDCard: &IDCard{
-        ID: "1"
-    }
+        ID: "1",
+    },
 })
 ```
 以上代码将在同一事务中依次执行以下操作：
@@ -851,9 +852,9 @@ db.Model("User").InsertOne(&User{
 db.Model("User").InsertOne(&User{
     RealName: "Eason Chan",
     IDCard: &IDCard{
-        ID: "1",
-        CardNum: "440783197410208373"
-    }
+        ID:      "1",
+        CardNum: "440783197410208373",
+    },
 })
 ```
 以上代码将在同一事务中依次执行以下操作：
@@ -865,11 +866,11 @@ db.Model("User").InsertOne(&User{
 
 如果需要**删除引用关系**，则需要使用特殊符号`$rm`：
 ```go
-db.Model("User").Find(db.Cond{ "ID": "100" }).UpdateOne(&User{
+db.Model("User").Find(db.Cond{"ID": "100"}).UpdateOne(&User{
     RealName: "Daniel Wu",
     IDCard: &IDCard{
-        ID: "$rm(1)"
-    }
+        ID: "$rm(1)",
+    },
 })
 ```
 以上代码将在同一事务中依次执行以下操作：
@@ -877,13 +878,13 @@ db.Model("User").Find(db.Cond{ "ID": "100" }).UpdateOne(&User{
 1. 修改`User`中`ID`为“100”的`RealName`值为“Daniel Wu”；
 1. 更新`IDCard`中`ID`为“1”且`UserID`为“100”字段的值为空。
 ### 引用删除
-如果需要**删除引用档案**，则需要使用特殊符号`$del`：
+如果需要删除**引用档案**，则需要使用特殊符号`$del`：
 ```go
-db.Model("User").Find(db.Cond{ "ID": "100" }).UpdateOne(&User{
+db.Model("User").Find(db.Cond{"ID": "100"}).UpdateOne(&User{
     RealName: "Daniel Wu",
     IDCard: &IDCard{
-        ID: "$del(1)"
-    }
+        ID: "$del(1)",
+    },
 })
 ```
 以上代码将在同一事务中依次执行以下操作：
