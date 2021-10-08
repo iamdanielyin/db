@@ -13,6 +13,7 @@ require (
 	github.com/google/uuid v1.2.0 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/imdario/mergo v0.3.12
+	github.com/jinzhu/inflection v1.0.0
 	github.com/json-iterator/go v1.1.10
 	github.com/lib/pq v1.10.0
 	github.com/mattn/go-oci8 v0.1.1
@@ -23,5 +24,4 @@ require (
 	github.com/stretchr/testify v1.7.0
 	go.mongodb.org/mongo-driver v1.5.0
 	gopkg.in/guregu/null.v4 v4.0.0
-	github.com/jinzhu/inflection v1.0.0
 )
