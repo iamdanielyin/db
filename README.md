@@ -344,6 +344,7 @@ for cur.HasNext() {
     _ = cur.Next(&user)
     users = append(users, user)
 }
+cur.Close()
 ```
 <a name="pXhaf"></a>
 ## 条件查询
@@ -495,7 +496,7 @@ db.Model("User".Find().OrderBy("-Status").All()
 db.Model("User".Find().OrderBy("-CreatedAt").OrderBy("Status").All()
 
 // 多个字段排序：方式二
-db.Model("User".Find().OrderBy([]string{"-CreatedAt", "Status"}).All()
+db.Model("User".Find().OrderBy("-CreatedAt", "Status").All()
 ```
 <a name="usHdi"></a>
 # 修改
@@ -506,8 +507,8 @@ if err != nil {
     panic("修改失败")
 }
 
-res.OK              // 执行是否成功：true
-res.RecordsAffected // 受影响记录数：1
+res.OK()              // 执行是否成功：true
+res.RecordsAffected() // 受影响记录数：1
 ```
 <a name="s8Ylo"></a>
 ## 单个修改
@@ -565,8 +566,8 @@ if err != nil {
     panic("修改失败")
 }
 
-res.OK              // 执行是否成功：true
-res.RecordsAffected // 受影响记录数：1
+res.OK()              // 执行是否成功：true
+res.RecordsAffected() // 受影响记录数：1
 ```
 <a name="lXp0m"></a>
 ## 单个删除
@@ -722,8 +723,8 @@ res, _ := db.Raw("test", ...).Exec()
 // 等价于
 res, _ := db.Session("test").Raw(...).Exec()
 
-res.OK
-res.RecordsAffected
+res.OK()
+res.RecordsAffected()
 ```
 <a name="PRphn"></a>
 # 中间件
@@ -769,7 +770,7 @@ db.RegisterMiddleware("User:beforeCreate", func(scope *db.Scope) error {
 - 传入参数`scope`的重要属性或方法的含义如下：
    - `Session` - 当前操作使用的连接会话；
    - `Metadata` - 当前元数据；
-   - `Conds` - 当前操作关联的所有查询条件；
+   - `Conditions` - 当前操作关联的所有查询条件；
    - `Action` - 当前数据库操作；
       - `insert-one`
       - `insert-many`
@@ -779,7 +780,7 @@ db.RegisterMiddleware("User:beforeCreate", func(scope *db.Scope) error {
       - `delete-many`
       - `find`
    - `OrderBys` - 排序参数；
-   - `Paginate` - 分页条数；
+   - `PageSize` - 分页条数；
    - `PageNum` - 当前页码；
    - `InsertDocs` - 新增的数据，Map数组结构；
    - `InsertOneResult` - 单个新增结果；

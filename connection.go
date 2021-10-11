@@ -7,17 +7,51 @@ import (
 )
 
 var (
-	connMap   = make(map[string]IConnection)
+	connMap   = make(map[string]*Connection)
 	connMapMu sync.RWMutex
 )
 
-type DataSource struct {
-	Name    string `valid:"required,!empty"`
-	Adapter string `valid:"required,!empty"`
-	URI     string `valid:"required,!empty"`
+type Client interface {
+	Name() string
+	Source() DataSource
+	Disconnect() error
 }
 
-func Connect(source DataSource) (IConnection, error) {
+type Connection struct {
+	Client
+	//callbacks  *callbacks
+	cacheStore *sync.Map
+}
+
+func (c *Connection) Disconnect() error {
+	return c.Client.Disconnect()
+}
+
+func (c *Connection) StartTransaction() (Tx, error) {
+	return nil, nil
+}
+
+func (c *Connection) WithTransaction(fn func(Tx) error) (err error) {
+	var tx Tx
+	tx, err = c.StartTransaction()
+	if err != nil {
+		return
+	}
+
+	defer func() {
+		if err != nil {
+			if e := tx.Rollback(); e != nil {
+				err = Errorf("%v; %w", err, e)
+			}
+		} else {
+			err = tx.Commit()
+		}
+	}()
+	err = fn(tx)
+	return
+}
+
+func Connect(source DataSource) (*Connection, error) {
 	connMapMu.Lock()
 	defer connMapMu.Unlock()
 
@@ -37,36 +71,41 @@ func Connect(source DataSource) (IConnection, error) {
 		return nil, Errorf(`data source name already exists "%s"`, source.Name)
 	}
 
-	conn, err := adapter.Connect(source)
+	client, err := adapter.Connect(source)
 	if err != nil {
 		return nil, err
+	}
+	conn := &Connection{
+		Client:     client,
+		cacheStore: &sync.Map{},
 	}
 	connMap[source.Name] = conn
 	return conn, nil
 }
 
-func Disconnect(name ...string) error {
+func Disconnect(names ...string) error {
 	connMapMu.Lock()
 	defer connMapMu.Unlock()
 
-	for _, item := range name {
-		item = strings.TrimSpace(item)
-		if v, has := connMap[item]; has && v != nil {
+	if len(names) == 0 {
+		for k, _ := range connMap {
+			names = append(names, k)
+		}
+	}
+
+	for _, name := range names {
+		name = strings.TrimSpace(name)
+		if v, has := connMap[name]; has && v != nil {
 			if err := v.Disconnect(); err != nil {
 				return err
 			}
 		}
 	}
+
 	return nil
 }
 
-func Session(name string) IConnection {
-	connMapMu.RLock()
-	defer connMapMu.RUnlock()
-
-	conn, has := connMap[name]
-	if !has || conn == nil {
-		panic(Errorf(`missing session: %s`, name))
-	}
-	return conn
+func (c *Connection) RegisterMetadata(meta Metadata) error {
+	//TODO 待实现元数据注册
+	return nil
 }
