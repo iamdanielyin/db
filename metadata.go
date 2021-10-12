@@ -21,6 +21,13 @@ func (m Metadata) Source() string {
 	return m.source
 }
 
+func (m Metadata) MustNativeName() string {
+	if m.NativeName == "" {
+		return m.NativeName
+	}
+	return m.Name
+}
+
 func RegisterMetadata(sourceName string, metadata Metadata) error {
 	metadataMapMu.Lock()
 	defer metadataMapMu.Unlock()

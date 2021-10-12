@@ -25,16 +25,13 @@ func Session(name string) *Connection {
 	return conn
 }
 
-func Model(name string) *Collection {
+func Model(name string) Collection {
 	meta, err := LookupMetadata(name)
 	if err != nil {
 		panic(err)
 	}
-	sess := Session(meta.Source)
-	return &Collection{
-		Metadata: meta,
-		Session:  sess,
-	}
+	sess := Session(meta.Source())
+	return sess.client.Model(meta, sess)
 }
 
 func StartTransaction(name string) (Tx, error) {

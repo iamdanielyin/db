@@ -1,20 +1,26 @@
 package db
 
-type Collection struct {
-	Metadata Metadata
-	Session  *Connection
+import "context"
+
+type Adapter interface {
+	Name() string
+	Connect(context.Context, DataSource) (Client, error)
 }
 
-func (c *Collection) InsertOne(doc interface{}) (*InsertOneResult, error) {
-	return nil, nil
+type Client interface {
+	Name() string
+	Source() DataSource
+	Disconnect(context.Context) error
+	Model(Metadata, *Connection) Collection
 }
 
-func (c *Collection) InsertMany(docs interface{}) (*InsertManyResult, error) {
-	return nil, nil
-}
-
-func (c *Collection) Find(...interface{}) Result {
-	return nil
+type Collection interface {
+	Name() string
+	Metadata() Metadata
+	Session() *Connection
+	InsertOne(interface{}) (InsertOneResult, error)
+	InsertMany(interface{}) (InsertManyResult, error)
+	Find(...interface{}) Result
 }
 
 type Result interface {
@@ -28,11 +34,11 @@ type Result interface {
 	Page(uint) Result
 	TotalRecords() (int, error)
 	TotalPages() (int, error)
-	UpdateOne(interface{}) (UpdateOneResult, error)
-	UpdateMany(interface{}) (UpdateManyResult, error)
+	UpdateOne(interface{}) (UpdateResult, error)
+	UpdateMany(interface{}) (UpdateResult, error)
 	Unscoped() Result
-	DeleteOne(interface{}) (DeleteOneResult, error)
-	DeleteMany(interface{}) (DeleteManyResult, error)
+	DeleteOne(interface{}) (DeleteResult, error)
+	DeleteMany(interface{}) (DeleteResult, error)
 }
 
 type Tx interface {
@@ -47,16 +53,9 @@ type Cursor interface {
 	Close() error
 }
 
-type InsertOneResult struct {
-	result interface{}
-}
-
-func (i *InsertOneResult) StringID() string {
-	return ""
-}
-
-func (i *InsertOneResult) IntID() int {
-	return 0
+type InsertOneResult interface {
+	StringID() string
+	IntID() int
 }
 
 type InsertManyResult interface {
@@ -64,20 +63,14 @@ type InsertManyResult interface {
 	IntIDs() []int
 }
 
-type UpdateOneResult interface {
-	ExecResult
+type UpdateResult interface {
+	OK() bool
+	RecordsAffected() int
 }
 
-type UpdateManyResult interface {
-	ExecResult
-}
-
-type DeleteOneResult interface {
-	ExecResult
-}
-
-type DeleteManyResult interface {
-	ExecResult
+type DeleteResult interface {
+	OK() bool
+	RecordsAffected() int
 }
 
 type QueryResult interface {

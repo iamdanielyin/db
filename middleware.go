@@ -10,7 +10,7 @@ func initializeCallbacks(sess *Connection) *callbacks {
 	return &callbacks{
 		processors: map[string]*processor{
 			"create": {sess: sess},
-			"read":   {sess: sess},
+			"query":  {sess: sess},
 			"update": {sess: sess},
 			"delete": {sess: sess},
 			"row":    {sess: sess},
@@ -45,7 +45,7 @@ func (cs *callbacks) Create() *processor {
 }
 
 func (cs *callbacks) Query() *processor {
-	return cs.processors["read"]
+	return cs.processors["query"]
 }
 
 func (cs *callbacks) Update() *processor {

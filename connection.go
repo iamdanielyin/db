@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"github.com/asaskevich/govalidator"
 	"strings"
 	"sync"
@@ -11,20 +12,18 @@ var (
 	connMapMu sync.RWMutex
 )
 
-type Client interface {
-	Name() string
-	Source() DataSource
-	Disconnect() error
-}
-
 type Connection struct {
-	Client
+	client Client
 	//callbacks  *callbacks
 	cacheStore *sync.Map
 }
 
+func (c *Connection) Client() Client {
+	return c.client
+}
+
 func (c *Connection) Disconnect() error {
-	return c.Client.Disconnect()
+	return c.client.Disconnect(context.Background())
 }
 
 func (c *Connection) StartTransaction() (Tx, error) {
@@ -71,12 +70,12 @@ func Connect(source DataSource) (*Connection, error) {
 		return nil, Errorf(`data source name already exists "%s"`, source.Name)
 	}
 
-	client, err := adapter.Connect(source)
+	client, err := adapter.Connect(context.Background(), source)
 	if err != nil {
 		return nil, err
 	}
 	conn := &Connection{
-		Client:     client,
+		client:     client,
 		cacheStore: &sync.Map{},
 	}
 	connMap[source.Name] = conn

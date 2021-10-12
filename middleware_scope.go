@@ -18,10 +18,10 @@ type Scope struct {
 	UpdateDoc        interface{}
 	InsertOneResult  InsertOneResult
 	InsertManyResult InsertManyResult
-	UpdateOneResult  UpdateOneResult
-	UpdateManyResult UpdateManyResult
-	DeleteOneResult  DeleteOneResult
-	DeleteManyResult DeleteManyResult
+	UpdateOneResult  UpdateResult
+	UpdateManyResult UpdateResult
+	DeleteOneResult  DeleteResult
+	DeleteManyResult DeleteResult
 }
 
 func (s *Scope) Skip() {

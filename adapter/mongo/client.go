@@ -4,12 +4,14 @@ import (
 	"context"
 	"github.com/yuyitech/db"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
 	"time"
 )
 
 type mongoClient struct {
 	adapter *mongoAdapter
 	source  db.DataSource
+	cs      connstring.ConnString
 	client  *mongo.Client
 }
 
@@ -21,8 +23,20 @@ func (c *mongoClient) Source() db.DataSource {
 	return c.source
 }
 
-func (c *mongoClient) Disconnect() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+func (c *mongoClient) Model(metadata db.Metadata, session *db.Connection) db.Collection {
+	mdb := c.client.Database(c.cs.Database)
+	coll := mdb.Collection(metadata.MustNativeName())
+	return &mongoCollection{
+		client: c,
+		sess:   session,
+		meta:   metadata,
+		db:     mdb,
+		coll:   coll,
+	}
+}
+
+func (c *mongoClient) Disconnect(parent context.Context) error {
+	ctx, cancel := context.WithTimeout(parent, 20*time.Second)
 	defer cancel()
 	return c.client.Disconnect(ctx)
 }

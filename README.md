@@ -368,8 +368,7 @@ db.Model("User").Find(db.Cond{
 - `<` - 小于
 - `>=` - 大于等于
 - `<=` - 小于等于
-- `=~` - 正则匹配
-- `!~` - 正则匹配取反
+- `~=` - 正则匹配
 - `$in` - 包含在指定数组内
 - `$nin` - 不包含在指定数组内
 - `$exists` - 是否存在
@@ -386,10 +385,7 @@ db.Cond{"EmailAddress =*": "example.com"}
 db.Cond{"EmailAddress *": "example"}
 
 // 表示查询 EmailAddress 包含“example”的数据
-db.Cond{"EmailAddress =~": "/example/igm"}
-
-// 表示查询 EmailAddress 不包含“example”的数据
-db.Cond{"EmailAddress !~": "/example/igm"}
+db.Cond{"EmailAddress ~=": "/example/igm"}
 ```
 <a name="yAytk"></a>
 ### 数值运算符

@@ -1,16 +1,13 @@
 package db
 
-import "sync"
+import (
+	"sync"
+)
 
 var (
 	adapterMap   = make(map[string]Adapter)
 	adapterMapMu sync.RWMutex
 )
-
-type Adapter interface {
-	Name() string
-	Connect(source DataSource) (Client, error)
-}
 
 func RegisterAdapter(name string, adapter Adapter) {
 	adapterMapMu.Lock()
