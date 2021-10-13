@@ -256,24 +256,26 @@ db.RegisterMetadata("test", db.Metadata{
 为简化配置，以下属性推荐使用简写配置：
 
 - `primaryKey` - 简写为`pk`；
-- `displayName` - 简写为`dn`；
+- `displayName` - 简写为`name`；
+- `nativeName` - 简写为`native`；
 - `description` - 简写为`desc`；
 - `required` - 简写为`rqd`；
+- `unique` - 简写为`uniq`；
 - `defaultValue` - 简写为`default`。
 ```go
 type User struct {
-	ID           string `db:"dn=数据唯一ID;desc=系统自动生成;pk=true"`
-	Username     string `db:"dn=用户名;desc=不允许重复;trim=both;rqd=true;uniq=true"`
-	Password     string `db:"dn=密码;desc=加密存储;trim=both;type=password"`
-	Nickname     string `db:"dn=昵称;trim=both"`
-	Avatar       string `db:"dn=头像;trim=both"`
-	Gender       string `db:"dn=性别;enum=[male:男,female:女,unknown:未知];default=unknown"`
-	Status       int    `db:"dn=用户状态;enum=[1:正常,-1:已禁用,-2:审核中];default=1"`
-	DenyLogin    bool   `db:"dn=禁止登录"`
-	CountryCode  string `db:"dn=国家/地区代码;rqd=+PhoneNumber"`
-	PhoneNumber  string `db:"dn=手机号码;desc=不含国家/地区代码;rqd=contact"`
-	EmailAddress string `db:"dn=邮箱地址;rqd=contact"`
-	CreatedAt    int    `db:"dn=注册时间;default=$now"`
+	ID           string `db:"name=数据唯一ID;desc=系统自动生成;pk=true"`
+	Username     string `db:"name=用户名;desc=不允许重复;trim=both;rqd=true;uniq=true"`
+	Password     string `db:"name=密码;desc=加密存储;trim=both;type=password"`
+	Nickname     string `db:"name=昵称;trim=both"`
+	Avatar       string `db:"name=头像;trim=both"`
+	Gender       string `db:"name=性别;enum=[male:男,female:女,unknown:未知];default=unknown"`
+	Status       int    `db:"name=用户状态;enum=[1:正常,-1:已禁用,-2:审核中];default=1"`
+	DenyLogin    bool   `db:"name=禁止登录"`
+	CountryCode  string `db:"name=国家/地区代码;rqd=+PhoneNumber"`
+	PhoneNumber  string `db:"name=手机号码;desc=不含国家/地区代码;rqd=contact"`
+	EmailAddress string `db:"name=邮箱地址;rqd=contact"`
+	CreatedAt    int    `db:"name=注册时间;default=$now"`
 }
 
 func (u *User) Metadata() db.Metadata {
@@ -531,17 +533,17 @@ db.Model('User'.Find(db.Cond{"ID": "1"}).UpdateOne(db.D{
 import "gopkg.in/guregu/null.v4"
 
 type User struct {
-	ID           string      `db:"dn=数据唯一ID;desc=系统自动生成"`
-	Username     string      `db:"dn=用户名;desc=不允许重复;trim=both;rqd=true;uniq=true"`
-	Password     null.String `db:"dn=密码;desc=加密存储;trim=both;type=password"`
-	Nickname     null.String `db:"dn=昵称;trim=both"`
-	Avatar       null.String `db:"dn=头像;trim=both"`
-	Gender       string      `db:"dn=性别;enum=[male:男,female:女,unknown:未知];default=unknown"`
-	Status       int         `db:"dn=用户状态;enum=[1:正常,-1:已禁用,-2:审核中];default=1"`
-	DenyLogin    null.Bool   `db:"dn=禁止登录"`
-	CountryCode  null.String `db:"dn=国家/地区代码;rqd=+PhoneNumber"`
-	PhoneNumber  null.String `db:"dn=手机号码;desc=不含国家/地区代码;rqd=contact"`
-	EmailAddress null.String `db:"dn=邮箱地址;rqd=contact"`
+	ID           string      `db:"name=数据唯一ID;desc=系统自动生成"`
+	Username     string      `db:"name=用户名;desc=不允许重复;trim=both;rqd=true;uniq=true"`
+	Password     null.String `db:"name=密码;desc=加密存储;trim=both;type=password"`
+	Nickname     null.String `db:"name=昵称;trim=both"`
+	Avatar       null.String `db:"name=头像;trim=both"`
+	Gender       string      `db:"name=性别;enum=[male:男,female:女,unknown:未知];default=unknown"`
+	Status       int         `db:"name=用户状态;enum=[1:正常,-1:已禁用,-2:审核中];default=1"`
+	DenyLogin    null.Bool   `db:"name=禁止登录"`
+	CountryCode  null.String `db:"name=国家/地区代码;rqd=+PhoneNumber"`
+	PhoneNumber  null.String `db:"name=手机号码;desc=不含国家/地区代码;rqd=contact"`
+	EmailAddress null.String `db:"name=邮箱地址;rqd=contact"`
 }
 ```
 <a name="cBYBK"></a>

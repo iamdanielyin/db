@@ -12,6 +12,16 @@ const (
 	Float     = "float"
 	Bool      = "bool"
 	Timestamp = "timestamp"
+	Time      = "time"
+	Object    = "object"
+	Array     = "array"
+	//ArrayString    = "[string]"
+	//ArrayInt       = "[int]"
+	//ArrayFloat     = "[float]"
+	//ArrayBool      = "[bool]"
+	//ArrayTimestamp = "[timestamp]"
+	//ArrayObject    = "[object]"
+	//ArrayArray     = "[array]"
 )
 
 var (
@@ -28,6 +38,10 @@ type Metadata struct {
 	DisplayName string
 	Description string
 	Properties  Fields
+}
+
+type MetadataInterface interface {
+	Metadata() Metadata
 }
 
 func (m Metadata) Session() *Connection {
@@ -81,7 +95,7 @@ func (fields Fields) nativeFields() Fields {
 type Field struct {
 	nativeProperties Fields
 
-	Type         string
+	Type         string `valid:"required,!empty"`
 	Name         string
 	NativeName   string
 	DisplayName  string
@@ -89,6 +103,7 @@ type Field struct {
 	Enum         Enum
 	Properties   Fields
 	Trim         string
+	Primary      string
 	Required     string
 	Unique       string
 	DefaultValue string
