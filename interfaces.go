@@ -26,7 +26,7 @@ type Collection interface {
 type Result interface {
 	And(...interface{}) Result
 	Or(...interface{}) Result
-	Project(map[string]int) Result
+	Project(...string) Result
 	QueryResult
 	OrderBy(...string) Result
 	Count() (int, error)
@@ -34,11 +34,11 @@ type Result interface {
 	Page(uint) Result
 	TotalRecords() (int, error)
 	TotalPages() (int, error)
-	UpdateOne(interface{}) (UpdateResult, error)
-	UpdateMany(interface{}) (UpdateResult, error)
+	UpdateOne(interface{}) (int, error)
+	UpdateMany(interface{}) (int, error)
 	Unscoped() Result
-	DeleteOne(interface{}) (DeleteResult, error)
-	DeleteMany(interface{}) (DeleteResult, error)
+	DeleteOne() (int, error)
+	DeleteMany() (int, error)
 }
 
 type Tx interface {
@@ -63,20 +63,10 @@ type InsertManyResult interface {
 	IntIDs() []int
 }
 
-type UpdateResult interface {
-	OK() bool
-	RecordsAffected() int
-}
-
-type DeleteResult interface {
-	OK() bool
-	RecordsAffected() int
-}
-
 type QueryResult interface {
 	One(dst interface{}) error
 	All(dst interface{}) error
-	Cursor() Cursor
+	Cursor() (Cursor, error)
 }
 
 type ExecResult interface {

@@ -56,7 +56,7 @@ func (c *mongoCollection) InsertMany(v interface{}) (db.InsertManyResult, error)
 }
 
 func (c *mongoCollection) Find(i ...interface{}) db.Result {
-	return &mongoResult{coll: c, conditions: i}
+	return &mongoResult{mc: c, conditions: i}
 }
 
 type insertOneResult struct {

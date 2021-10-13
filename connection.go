@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"github.com/asaskevich/govalidator"
+	"reflect"
 	"strings"
 	"sync"
 )
@@ -104,7 +105,44 @@ func Disconnect(names ...string) error {
 	return nil
 }
 
-func (c *Connection) RegisterMetadata(meta Metadata) error {
-	//TODO 待实现元数据注册
+func (c *Connection) RegisterMetadata(metaOrStruct interface{}) error {
+	if metaOrStruct == nil {
+		return nil
+	}
+	metadataMapMu.Lock()
+	defer metadataMapMu.Unlock()
+
+	var metadata Metadata
+	switch v := metaOrStruct.(type) {
+	case Metadata:
+		metadata = v
+	case *Metadata:
+		metadata = *v
+	default:
+		parsed := parseStructMetadata(v)
+		if parsed == nil {
+			return Errorf("unsupported metadata type: %v", metadata)
+		}
+		metadata = *parsed
+	}
+	metadata.source = c
+	metadata.Properties = metadata.Properties.updateFieldNames()   // 先更新field.Name
+	metadata.nativeProperties = metadata.Properties.nativeFields() // 再计算nativeProperties
+	// 校验结构体
+	if _, err := govalidator.ValidateStruct(&metadata); err != nil {
+		return Errorf(err.Error())
+	}
+	metadataMap[metadata.Name] = metadata
+	return nil
+}
+
+func parseStructMetadata(v interface{}) *Metadata {
+	reflectValue := reflect.Indirect(reflect.ValueOf(v))
+	switch reflectValue.Kind() {
+	case reflect.Struct:
+	case reflect.Map:
+	default:
+		return nil
+	}
 	return nil
 }

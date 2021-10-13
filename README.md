@@ -498,13 +498,12 @@ db.Model("User".Find().OrderBy("-CreatedAt", "Status").All()
 # 修改
 支持单个修改和批量修改两种，修改语法如下：
 ```go
-res, err := db.Model("User").Find(...).UpdateXxx(...)
+n, err := db.Model("User").Find(...).UpdateXxx(...)
 if err != nil {
     panic("修改失败")
 }
 
-res.OK()              // 执行是否成功：true
-res.RecordsAffected() // 受影响记录数：1
+n // 受影响记录数：1
 ```
 <a name="s8Ylo"></a>
 ## 单个修改
@@ -557,13 +556,12 @@ db.Model("User").Find().UpdateMany(&User{
 # 删除
 支持单个删除和批量删除两种，删除语法如下：
 ```go
-res, err := db.Model("User").Find(...).DeleteXxx()
+n, err := db.Model("User").Find(...).DeleteXxx()
 if err != nil {
     panic("修改失败")
 }
 
-res.OK()              // 执行是否成功：true
-res.RecordsAffected() // 受影响记录数：1
+n // 受影响记录数：1
 ```
 <a name="lXp0m"></a>
 ## 单个删除
@@ -715,12 +713,9 @@ q, _ := db.Raw("test", `
 <a name="FJJWr"></a>
 ## 执行类脚本
 ```go
-res, _ := db.Raw("test", ...).Exec()
+n, _ := db.Raw("test", ...).Exec()
 // 等价于
-res, _ := db.Session("test").Raw(...).Exec()
-
-res.OK()
-res.RecordsAffected()
+n, _ := db.Session("test").Raw(...).Exec()
 ```
 <a name="PRphn"></a>
 # 中间件

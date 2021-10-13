@@ -1,15 +1,24 @@
 package mongo
 
-import "github.com/yuyitech/db"
+import (
+	"context"
+	"github.com/yuyitech/db"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"strings"
+	"time"
+)
 
 type mongoResult struct {
-	coll       *mongoCollection
+	mc         *mongoCollection
 	conditions []interface{}
-	project    map[string]int
+	projection []string
 	orderBys   []string
 	pageNum    uint
 	pageSize   uint
 	unscoped   bool
+	filter     bson.D
 }
 
 func (r *mongoResult) And(i ...interface{}) db.Result {
@@ -22,21 +31,62 @@ func (r *mongoResult) Or(i ...interface{}) db.Result {
 	return r
 }
 
-func (r *mongoResult) Project(m map[string]int) db.Result {
-	r.project = m
+func (r *mongoResult) Project(p ...string) db.Result {
+	r.projection = p
+	return r
+}
+
+func (r *mongoResult) beforeQuery() *mongoResult {
+	if r.filter == nil {
+		r.filter = QueryFilter(r.conditions...)
+	}
 	return r
 }
 
 func (r *mongoResult) One(dst interface{}) error {
-	panic("implement me")
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	err := r.beforeQuery().mc.coll.FindOne(ctx,
+		r.filter,
+		r.buildFindOneOptions(),
+	).Decode(dst)
+	cancel()
+
+	if err != mongo.ErrNoDocuments {
+		return db.Errorf(`%v`, err)
+	}
+	return nil
 }
 
 func (r *mongoResult) All(dst interface{}) error {
-	panic("implement me")
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	cur, err := r.beforeQuery().mc.coll.Find(ctx,
+		r.filter,
+		r.buildFindOptions(),
+	)
+	cancel()
+	if err != mongo.ErrNoDocuments {
+		return db.Errorf(`%v`, err)
+	}
+	ctx, cancel = context.WithTimeout(context.Background(), 1*time.Minute)
+	err = cur.All(ctx, dst)
+	cancel()
+	if err != nil {
+		return db.Errorf(`%v`, err)
+	}
+	return nil
 }
 
-func (r *mongoResult) Cursor() db.Cursor {
-	panic("implement me")
+func (r *mongoResult) Cursor() (db.Cursor, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	cur, err := r.beforeQuery().mc.coll.Find(ctx,
+		r.filter,
+		r.buildFindOptions(),
+	)
+	cancel()
+	if err != mongo.ErrNoDocuments {
+		return nil, db.Errorf(`%v`, err)
+	}
+	return &mongoCursor{result: r, cur: cur}, nil
 }
 
 func (r *mongoResult) OrderBy(s ...string) db.Result {
@@ -66,23 +116,143 @@ func (r *mongoResult) TotalPages() (int, error) {
 	panic("implement me")
 }
 
-func (r *mongoResult) UpdateOne(i interface{}) (db.UpdateResult, error) {
-	panic("implement me")
-}
-
-func (r *mongoResult) UpdateMany(i interface{}) (db.UpdateResult, error) {
-	panic("implement me")
-}
-
 func (r *mongoResult) Unscoped() db.Result {
 	r.unscoped = true
 	return r
 }
 
-func (r *mongoResult) DeleteOne(i interface{}) (db.DeleteResult, error) {
-	panic("implement me")
+func (r *mongoResult) UpdateOne(i interface{}) (int, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+	result, err := r.beforeQuery().mc.coll.UpdateOne(ctx, r.filter, i)
+	if err != nil {
+		return 0, db.Errorf(`%v`, err)
+	}
+	return int(result.MatchedCount), nil
 }
 
-func (r *mongoResult) DeleteMany(i interface{}) (db.DeleteResult, error) {
-	panic("implement me")
+func (r *mongoResult) UpdateMany(i interface{}) (int, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+	result, err := r.beforeQuery().mc.coll.UpdateMany(ctx, r.filter, i)
+	if err != nil {
+		return 0, db.Errorf(`%v`, err)
+	}
+	return int(result.MatchedCount), nil
+}
+
+func (r *mongoResult) DeleteOne() (int, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+	result, err := r.beforeQuery().mc.coll.DeleteOne(ctx, r.filter)
+	if err != nil {
+		return 0, db.Errorf(`%v`, err)
+	}
+	return int(result.DeletedCount), nil
+}
+
+func (r *mongoResult) DeleteMany() (int, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+	result, err := r.beforeQuery().mc.coll.DeleteMany(ctx, r.filter)
+	if err != nil {
+		return 0, db.Errorf(`%v`, err)
+	}
+	return int(result.DeletedCount), nil
+}
+
+type mongoCursor struct {
+	result          *mongoResult
+	cur             *mongo.Cursor
+	unprocessedNext bool
+	lastNextValue   bool
+}
+
+func (c *mongoCursor) HasNext() bool {
+	if c.unprocessedNext {
+		return c.lastNextValue
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+	c.unprocessedNext = true
+	c.lastNextValue = c.cur.Next(ctx)
+	return c.lastNextValue
+}
+
+func (c *mongoCursor) Next(dst interface{}) error {
+	c.unprocessedNext = true
+	if err := c.cur.Decode(dst); err != nil {
+		return db.Errorf(`%v`, err)
+	}
+	return nil
+}
+
+func (c *mongoCursor) Close() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+	if err := c.cur.Close(ctx); err != nil {
+		return db.Errorf(`%v`, err)
+	}
+	return nil
+}
+
+func (r *mongoResult) buildFindOptions() *options.FindOptions {
+	opts := options.Find()
+	if r.pageSize > 0 {
+		opts.SetLimit(int64(r.pageSize))
+		if r.pageNum > 0 {
+			opts.SetSkip(int64((r.pageNum - 1) * r.pageSize))
+		}
+	}
+	meta := r.mc.meta
+	if len(r.orderBys) > 0 {
+		var sort bson.D
+		for _, item := range r.orderBys {
+			var (
+				key   = item
+				value = 1
+			)
+			if strings.HasPrefix(item, "-") {
+				key = item[1:]
+				value = -1
+			}
+			if f, has := meta.FieldByName(key); has {
+				key = f.MustNativeName()
+			}
+			sort = append(sort, bson.E{Key: key, Value: value})
+		}
+		if len(sort) > 0 {
+			opts.SetSort(sort)
+		}
+	}
+	if len(r.projection) > 0 {
+		var projection bson.D
+		for _, item := range r.projection {
+			var (
+				key   = item
+				value = 1
+			)
+			if strings.HasPrefix(item, "-") {
+				key = item[1:]
+				value = 0
+			}
+			if f, has := meta.FieldByName(key); has {
+				key = f.MustNativeName()
+			}
+			projection = append(projection, bson.E{Key: key, Value: value})
+		}
+		if len(projection) > 0 {
+			opts.SetProjection(projection)
+		}
+	}
+	return opts
+}
+
+func (r *mongoResult) buildFindOneOptions() *options.FindOneOptions {
+	findOpts := r.buildFindOptions()
+	return &options.FindOneOptions{
+		Projection: findOpts.Projection,
+		Skip:       findOpts.Skip,
+		Sort:       findOpts.Sort,
+	}
 }
