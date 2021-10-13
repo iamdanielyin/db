@@ -38,7 +38,10 @@ func (r *mongoResult) Project(p ...string) db.Result {
 
 func (r *mongoResult) beforeQuery() *mongoResult {
 	if r.filter == nil {
-		r.filter = QueryFilter(r.conditions...)
+		r.filter = QueryFilter(r.mc.meta, r.conditions...)
+	}
+	if len(r.conditions) == 0 && r.filter == nil {
+		r.filter = bson.D{}
 	}
 	return r
 }
@@ -51,7 +54,7 @@ func (r *mongoResult) One(dst interface{}) error {
 	).Decode(dst)
 	cancel()
 
-	if err != mongo.ErrNoDocuments {
+	if err != nil && err != mongo.ErrNoDocuments {
 		return db.Errorf(`%v`, err)
 	}
 	return nil
@@ -64,7 +67,7 @@ func (r *mongoResult) All(dst interface{}) error {
 		r.buildFindOptions(),
 	)
 	cancel()
-	if err != mongo.ErrNoDocuments {
+	if err != nil && err != mongo.ErrNoDocuments {
 		return db.Errorf(`%v`, err)
 	}
 	ctx, cancel = context.WithTimeout(context.Background(), 1*time.Minute)
@@ -83,7 +86,7 @@ func (r *mongoResult) Cursor() (db.Cursor, error) {
 		r.buildFindOptions(),
 	)
 	cancel()
-	if err != mongo.ErrNoDocuments {
+	if err != nil && err != mongo.ErrNoDocuments {
 		return nil, db.Errorf(`%v`, err)
 	}
 	return &mongoCursor{result: r, cur: cur}, nil

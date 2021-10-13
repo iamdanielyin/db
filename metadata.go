@@ -69,6 +69,9 @@ func (fields Fields) updateFieldNames() Fields {
 	if len(fields) > 0 {
 		for k, v := range fields {
 			v.Name = k
+			if v.NativeName == "" {
+				v.NativeName = strings.ToLower(v.Name)
+			}
 			if len(v.Properties) > 0 {
 				v.Properties = v.Properties.updateFieldNames()
 			}

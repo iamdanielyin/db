@@ -90,7 +90,7 @@ func main() {
 			LastName:  "Jobs",
 		},
 	})
-	fmt.Println(res.StringIDs)
+	fmt.Println(res.StringIDs())
 
 	// 查询数据
 	var member Member
@@ -298,7 +298,7 @@ res, _ := db.Model('User').InsertOne(User{
     EmailAddress: "foo@example.com",
 })
 
-fmt.Println(res.StringID) // 5326bfc0e6f780b21635248f
+fmt.Println(res.StringID()) // 5326bfc0e6f780b21635248f
 ```
 <a name="BW1TR"></a>
 ## 批量新增
@@ -319,7 +319,7 @@ res, _ := db.Model('User').InsertMany([]User{
     },
 })
 
-fmt.Println(res.StringIDs) // [5326bfc0e6f780b21635248f, 2094bfc0e6f780b21635938d, 9287bfc0e6f780b216350129t]
+fmt.Println(res.StringIDs()) // [5326bfc0e6f780b21635248f, 2094bfc0e6f780b21635938d, 9287bfc0e6f780b216350129t]
 ```
 <a name="MDT4w"></a>
 # 查询
