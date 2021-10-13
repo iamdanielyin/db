@@ -30,8 +30,7 @@ func Model(name string) Collection {
 	if err != nil {
 		panic(err)
 	}
-	sess := Session(meta.Source())
-	return sess.client.Model(meta, sess)
+	return meta.Session().client.Model(meta)
 }
 
 func StartTransaction(name string) (Tx, error) {

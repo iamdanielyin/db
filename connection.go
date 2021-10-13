@@ -149,9 +149,6 @@ func parseStructMetadata(v interface{}) (*Metadata, error) {
 	switch reflectValue.Kind() {
 	case reflect.Struct:
 		s := structs.New(v)
-		if s.IsZero() {
-			return nil, nil
-		}
 		metadata := Metadata{
 			Name:       s.Name(),
 			Properties: make(Fields),
@@ -234,6 +231,7 @@ func parseStructMetadata(v interface{}) (*Metadata, error) {
 			}
 			metadata.Properties[field.Name] = field
 		}
+		return &metadata, nil
 	}
 	return nil, nil
 }

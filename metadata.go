@@ -49,7 +49,7 @@ func (m Metadata) Session() *Connection {
 }
 
 func (m Metadata) MustNativeName() string {
-	if m.NativeName == "" {
+	if m.NativeName != "" {
 		return m.NativeName
 	}
 	return m.Name
@@ -110,7 +110,7 @@ type Field struct {
 }
 
 func (f *Field) MustNativeName() string {
-	if f.NativeName == "" {
+	if f.NativeName != "" {
 		return f.NativeName
 	}
 	return f.Name

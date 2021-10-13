@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/yuyitech/db"
+	_ "github.com/yuyitech/db/adapter/mongo"
+	"os"
 )
 
 type Member struct {
@@ -15,7 +17,7 @@ func main() {
 	sess, err := db.Connect(db.DataSource{
 		Name:    "test",
 		Adapter: "mongo",
-		URI:     "mongodb://admin:123456@localhost/test",
+		URI:     os.Getenv("MONGO_URI"),
 	})
 	if err != nil {
 		panic("连接失败！")
@@ -39,7 +41,7 @@ func main() {
 			LastName:  "Jobs",
 		},
 	})
-	fmt.Println(res.StringIDs)
+	fmt.Println(res.StringIDs())
 
 	// 查询数据
 	var member Member

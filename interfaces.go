@@ -11,7 +11,7 @@ type Client interface {
 	Name() string
 	Source() DataSource
 	Disconnect(context.Context) error
-	Model(Metadata, *Connection) Collection
+	Model(Metadata) Collection
 }
 
 type Collection interface {

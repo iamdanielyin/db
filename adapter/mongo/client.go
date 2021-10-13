@@ -23,12 +23,12 @@ func (c *mongoClient) Source() db.DataSource {
 	return c.source
 }
 
-func (c *mongoClient) Model(metadata db.Metadata, session *db.Connection) db.Collection {
+func (c *mongoClient) Model(metadata db.Metadata) db.Collection {
 	mdb := c.client.Database(c.cs.Database)
 	coll := mdb.Collection(metadata.MustNativeName())
 	return &mongoCollection{
 		client: c,
-		sess:   session,
+		sess:   metadata.Session(),
 		meta:   metadata,
 		db:     mdb,
 		coll:   coll,
