@@ -2,7 +2,6 @@ package mongo
 
 import (
 	"context"
-	"fmt"
 	"github.com/yuyitech/db"
 	"github.com/yuyitech/structs"
 	"go.mongodb.org/mongo-driver/bson"
@@ -229,9 +228,6 @@ func (r *mongoResult) beforeUpdate(i interface{}) *mongoResult {
 		return r
 	}
 	reflectValue := reflect.Indirect(reflect.ValueOf(i))
-	fmt.Println(reflectValue.Kind())
-	fmt.Println(reflect.Struct)
-	fmt.Println(reflectValue.Kind().String())
 	switch reflectValue.Kind() {
 	case reflect.Struct:
 		meta := r.mc.meta
