@@ -2,10 +2,14 @@ package mongo
 
 import (
 	"context"
+	"fmt"
 	"github.com/yuyitech/db"
+	"github.com/yuyitech/structs"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"math"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -19,6 +23,7 @@ type mongoResult struct {
 	pageSize   uint
 	unscoped   bool
 	filter     bson.D
+	updateDoc  interface{}
 }
 
 func (r *mongoResult) And(i ...interface{}) db.Result {
@@ -33,16 +38,6 @@ func (r *mongoResult) Or(i ...interface{}) db.Result {
 
 func (r *mongoResult) Project(p ...string) db.Result {
 	r.projection = p
-	return r
-}
-
-func (r *mongoResult) beforeQuery() *mongoResult {
-	if r.filter == nil {
-		r.filter = QueryFilter(r.mc.meta, r.conditions...)
-	}
-	if len(r.conditions) == 0 && r.filter == nil {
-		r.filter = bson.D{}
-	}
 	return r
 }
 
@@ -98,7 +93,13 @@ func (r *mongoResult) OrderBy(s ...string) db.Result {
 }
 
 func (r *mongoResult) Count() (int, error) {
-	panic("implement me")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+	val, err := r.beforeQuery().mc.coll.CountDocuments(ctx, r.filter)
+	if err != nil {
+		return 0, db.Errorf(`%v`, err)
+	}
+	return int(val), nil
 }
 
 func (r *mongoResult) Paginate(u uint) db.Result {
@@ -112,11 +113,19 @@ func (r *mongoResult) Page(u uint) db.Result {
 }
 
 func (r *mongoResult) TotalRecords() (int, error) {
-	panic("implement me")
+	return r.Count()
 }
 
 func (r *mongoResult) TotalPages() (int, error) {
-	panic("implement me")
+	if r.pageSize == 0 {
+		return 1, nil
+	}
+	totalRecords, err := r.TotalRecords()
+	if err != nil {
+		return 0, db.Errorf(`%v`, err)
+	}
+	totalPages := int(math.Ceil(float64(totalRecords) / float64(r.pageSize)))
+	return totalPages, nil
 }
 
 func (r *mongoResult) Unscoped() db.Result {
@@ -127,7 +136,7 @@ func (r *mongoResult) Unscoped() db.Result {
 func (r *mongoResult) UpdateOne(i interface{}) (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
-	result, err := r.beforeQuery().mc.coll.UpdateOne(ctx, r.filter, i)
+	result, err := r.beforeQuery().beforeUpdate(i).mc.coll.UpdateOne(ctx, r.filter, r.updateDoc)
 	if err != nil {
 		return 0, db.Errorf(`%v`, err)
 	}
@@ -137,7 +146,7 @@ func (r *mongoResult) UpdateOne(i interface{}) (int, error) {
 func (r *mongoResult) UpdateMany(i interface{}) (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
-	result, err := r.beforeQuery().mc.coll.UpdateMany(ctx, r.filter, i)
+	result, err := r.beforeQuery().beforeUpdate(i).mc.coll.UpdateMany(ctx, r.filter, r.updateDoc)
 	if err != nil {
 		return 0, db.Errorf(`%v`, err)
 	}
@@ -164,39 +173,93 @@ func (r *mongoResult) DeleteMany() (int, error) {
 	return int(result.DeletedCount), nil
 }
 
-type mongoCursor struct {
-	result          *mongoResult
-	cur             *mongo.Cursor
-	unprocessedNext bool
-	lastNextValue   bool
+func (r *mongoResult) beforeQuery() *mongoResult {
+	if r.filter == nil {
+		r.filter = QueryFilter(r.mc.meta, r.conditions...)
+	}
+	if len(r.conditions) == 0 && r.filter == nil {
+		r.filter = bson.D{}
+	}
+	return r
 }
 
-func (c *mongoCursor) HasNext() bool {
-	if c.unprocessedNext {
-		return c.lastNextValue
+func (r *mongoResult) beforeUpdate(i interface{}) *mongoResult {
+	switch v := i.(type) {
+	case bson.D:
+		if v[0].Key == "$set" {
+			r.updateDoc = v
+			return r
+		}
+		r.updateDoc = bson.E{Key: "$set", Value: v}
+		return r
+	case *bson.D:
+		if (*v)[0].Key == "$set" {
+			r.updateDoc = v
+			return r
+		}
+		r.updateDoc = bson.E{Key: "$set", Value: v}
+		return r
+	case bson.M:
+		if _, has := v["$set"]; has {
+			r.updateDoc = v
+			return r
+		}
+		r.updateDoc = bson.E{Key: "$set", Value: v}
+		return r
+	case *bson.M:
+		if _, has := (*v)["$set"]; has {
+			r.updateDoc = v
+			return r
+		}
+		r.updateDoc = bson.E{Key: "$set", Value: v}
+		return r
+	case bson.E:
+		if v.Key == "$set" {
+			r.updateDoc = v
+			return r
+		}
+		r.updateDoc = bson.E{Key: "$set", Value: v}
+		return r
+	case *bson.E:
+		if v.Key == "$set" {
+			r.updateDoc = v
+			return r
+		}
+		r.updateDoc = bson.E{Key: "$set", Value: v}
+		return r
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer cancel()
-	c.unprocessedNext = true
-	c.lastNextValue = c.cur.Next(ctx)
-	return c.lastNextValue
-}
-
-func (c *mongoCursor) Next(dst interface{}) error {
-	c.unprocessedNext = true
-	if err := c.cur.Decode(dst); err != nil {
-		return db.Errorf(`%v`, err)
+	reflectValue := reflect.Indirect(reflect.ValueOf(i))
+	fmt.Println(reflectValue.Kind().String())
+	switch reflectValue.Kind() {
+	case reflect.Struct:
+		meta := r.mc.meta
+		s := structs.New(i)
+		var doc bson.D
+		for _, field := range s.Fields() {
+			if field.IsZero() {
+				continue
+			}
+			key := field.Name()
+			if f, has := meta.FieldByName(key); has {
+				key = f.MustNativeName()
+			}
+			doc = append(doc, bson.E{Key: key, Value: field.Value()})
+		}
+		r.updateDoc = bson.E{Key: "$set", Value: doc}
+		return r
+	case reflect.Map:
+		for _, item := range reflectValue.MapKeys() {
+			if item.Interface().(string) == "$set" {
+				r.updateDoc = i
+				return r
+			}
+		}
+		r.updateDoc = bson.E{Key: "$set", Value: i}
+		return r
+	default:
+		r.updateDoc = bson.E{Key: "$set", Value: i}
+		return r
 	}
-	return nil
-}
-
-func (c *mongoCursor) Close() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer cancel()
-	if err := c.cur.Close(ctx); err != nil {
-		return db.Errorf(`%v`, err)
-	}
-	return nil
 }
 
 func (r *mongoResult) buildFindOptions() *options.FindOptions {
@@ -258,4 +321,39 @@ func (r *mongoResult) buildFindOneOptions() *options.FindOneOptions {
 		Skip:       findOpts.Skip,
 		Sort:       findOpts.Sort,
 	}
+}
+
+type mongoCursor struct {
+	result          *mongoResult
+	cur             *mongo.Cursor
+	unprocessedNext bool
+	lastNextValue   bool
+}
+
+func (c *mongoCursor) HasNext() bool {
+	if c.unprocessedNext {
+		return c.lastNextValue
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+	c.unprocessedNext = true
+	c.lastNextValue = c.cur.Next(ctx)
+	return c.lastNextValue
+}
+
+func (c *mongoCursor) Next(dst interface{}) error {
+	c.unprocessedNext = true
+	if err := c.cur.Decode(dst); err != nil {
+		return db.Errorf(`%v`, err)
+	}
+	return nil
+}
+
+func (c *mongoCursor) Close() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+	if err := c.cur.Close(ctx); err != nil {
+		return db.Errorf(`%v`, err)
+	}
+	return nil
 }
