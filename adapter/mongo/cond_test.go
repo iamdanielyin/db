@@ -130,7 +130,7 @@ func TestQueryFilter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := mongo.QueryFilter(tt.args); !reflect.DeepEqual(fmt.Sprintf("%v", got), tt.want) {
+			if got := mongo.QueryFilter(db.Metadata{}, tt.args); !reflect.DeepEqual(fmt.Sprintf("%v", got), tt.want) {
 				t.Errorf("QueryFilter() = %v, want %v", got, tt.want)
 			}
 		})

@@ -190,45 +190,47 @@ func (r *mongoResult) beforeUpdate(i interface{}) *mongoResult {
 			r.updateDoc = v
 			return r
 		}
-		r.updateDoc = bson.E{Key: "$set", Value: v}
+		r.updateDoc = bson.D{bson.E{Key: "$set", Value: v}}
 		return r
 	case *bson.D:
 		if (*v)[0].Key == "$set" {
-			r.updateDoc = v
+			r.updateDoc = *v
 			return r
 		}
-		r.updateDoc = bson.E{Key: "$set", Value: v}
+		r.updateDoc = bson.D{bson.E{Key: "$set", Value: v}}
 		return r
 	case bson.M:
 		if _, has := v["$set"]; has {
 			r.updateDoc = v
 			return r
 		}
-		r.updateDoc = bson.E{Key: "$set", Value: v}
+		r.updateDoc = bson.D{bson.E{Key: "$set", Value: v}}
 		return r
 	case *bson.M:
 		if _, has := (*v)["$set"]; has {
 			r.updateDoc = v
 			return r
 		}
-		r.updateDoc = bson.E{Key: "$set", Value: v}
+		r.updateDoc = bson.D{bson.E{Key: "$set", Value: v}}
 		return r
 	case bson.E:
 		if v.Key == "$set" {
-			r.updateDoc = v
+			r.updateDoc = bson.D{v}
 			return r
 		}
-		r.updateDoc = bson.E{Key: "$set", Value: v}
+		r.updateDoc = bson.D{bson.E{Key: "$set", Value: v}}
 		return r
 	case *bson.E:
 		if v.Key == "$set" {
-			r.updateDoc = v
+			r.updateDoc = bson.D{*v}
 			return r
 		}
-		r.updateDoc = bson.E{Key: "$set", Value: v}
+		r.updateDoc = bson.D{bson.E{Key: "$set", Value: v}}
 		return r
 	}
 	reflectValue := reflect.Indirect(reflect.ValueOf(i))
+	fmt.Println(reflectValue.Kind())
+	fmt.Println(reflect.Struct)
 	fmt.Println(reflectValue.Kind().String())
 	switch reflectValue.Kind() {
 	case reflect.Struct:
@@ -245,7 +247,7 @@ func (r *mongoResult) beforeUpdate(i interface{}) *mongoResult {
 			}
 			doc = append(doc, bson.E{Key: key, Value: field.Value()})
 		}
-		r.updateDoc = bson.E{Key: "$set", Value: doc}
+		r.updateDoc = bson.D{bson.E{Key: "$set", Value: doc}}
 		return r
 	case reflect.Map:
 		for _, item := range reflectValue.MapKeys() {
@@ -254,10 +256,10 @@ func (r *mongoResult) beforeUpdate(i interface{}) *mongoResult {
 				return r
 			}
 		}
-		r.updateDoc = bson.E{Key: "$set", Value: i}
+		r.updateDoc = bson.D{bson.E{Key: "$set", Value: i}}
 		return r
 	default:
-		r.updateDoc = bson.E{Key: "$set", Value: i}
+		r.updateDoc = bson.D{bson.E{Key: "$set", Value: i}}
 		return r
 	}
 }
