@@ -588,21 +588,21 @@ db.Model("User".Find(db.Or(
 框架自带对逻辑删除的支持，但使用前需要注册逻辑删除规则。
 ```go
 // 针对所有元数据设置全局规则（全局优先级最低）
-db.RegisterLogicDeleteRule("*", db.LogicDeleteRule{
+db.RegisterLogicDeleteRule("*", &db.LogicDeleteRule{
     Field:    "DeletedAt",
     SetValue: "$now",
     GetValue: db.Cond{"DeletedAt $exists": false},
 })
 
 // 针对某一组元数据设置规则（组规则优于全局规则）
-db.RegisterLogicDeleteRule("Acc*", db.LogicDeleteRule{
+db.RegisterLogicDeleteRule("Acc*", &db.LogicDeleteRule{
     Field:    "IsDeleted",
     SetValue: "$int(1)",
     GetValue: db.Cond{"DeletedAt !=": 1},
 })
 
 // 针对单个元数据设置规则（元数据规则高于组规则）
-db.RegisterLogicDeleteRule("User", db.LogicDeleteRule{
+db.RegisterLogicDeleteRule("User", &db.LogicDeleteRule{
     Field:    "DeletedAt",
     SetValue: "$now",
     GetValue: db.Cond{"DeletedAt $exists": false},
@@ -623,10 +623,10 @@ db.RegisterLogicDeleteRule("User", db.LogicDeleteRule{
 支持在`Find`以后链式调用`Unscoped`函数忽略**所有逻辑删除规则**。
 ```go
 // 单个物理删除
-db.Model("User").Find().Unscoped().RemoveOne()
+db.Model("User").Find().Unscoped().DeleteOne()
 
 // 批量物理删除
-db.Model("User").Find().Unscoped().RemoveMany()
+db.Model("User").Find().Unscoped().DeleteMany()
 ```
 <a name="yGnyc"></a>
 # 事务

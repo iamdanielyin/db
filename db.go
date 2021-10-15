@@ -40,3 +40,7 @@ func StartTransaction(name string) (Tx, error) {
 func WithTransaction(name string, fn func(Tx) error) error {
 	return Session(name).WithTransaction(fn)
 }
+
+func RegisterMiddleware(rule string, fn func(*Scope)) {
+
+}

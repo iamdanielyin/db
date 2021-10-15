@@ -1,40 +1,32 @@
 package db
 
-func registerCreateCallbacks(callbacks *callbacks) {
+func registerCreateCallbacks(callbacks *callbacks) *callbacks {
 	processor := callbacks.Create()
 	processor.Register("db:begin_transaction", beginTransactionCallback)
 	processor.Register("db:before_create", beforeCreateCallback)
-	processor.Register("db:save_before_associations", saveBeforeAssociationsCallback)
 	processor.Register("db:create", createCallback)
-	processor.Register("db:save_after_associations", saveAfterAssociationsCallback)
 	processor.Register("db:after_create", afterCreateCallback)
 	processor.Register("db:commit_or_rollback_transaction", commitOrRollbackTransactionCallback)
-}
-
-func beginTransactionCallback(s *Scope) {
-
+	return callbacks
 }
 
 func beforeCreateCallback(s *Scope) {
 
 }
 
-func saveBeforeAssociationsCallback(s *Scope) {
-
-}
-
 func createCallback(s *Scope) {
+	if s.HasError() {
+		return
+	}
 
-}
-
-func saveAfterAssociationsCallback(s *Scope) {
-
+	switch s.Action {
+	case ActionInsertOne:
+		s.InsertOneResult, s.Error = s.Coll.InsertOne(s.InsertOneDoc)
+	case ActionInsertMany:
+		s.InsertManyResult, s.Error = s.Coll.InsertMany(s.InsertManyDocs)
+	}
 }
 
 func afterCreateCallback(s *Scope) {
-
-}
-
-func commitOrRollbackTransactionCallback(s *Scope) {
 
 }

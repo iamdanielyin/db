@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"sync"
 	"time"
 )
 
@@ -70,6 +71,9 @@ func (cc *callbacksCollection) NewScope(scope *Scope) *Scope {
 	scope.StartTime = time.Now()
 	scope.Session = cc.Session()
 	scope.Metadata = cc.Metadata()
+	if scope.cacheStore == nil {
+		scope.cacheStore = &sync.Map{}
+	}
 	return scope
 }
 
@@ -89,6 +93,7 @@ func (cc *callbacksCollection) InsertOne(i interface{}) (InsertOneResult, error)
 	scope := &Scope{
 		Action:       ActionInsertOne,
 		InsertOneDoc: i,
+		Coll:         cc.rawColl,
 	}
 	cc.callbacks.Create().Execute(cc.NewScope(scope))
 	return scope.InsertOneResult, scope.Error
@@ -104,62 +109,78 @@ func (cc *callbacksCollection) InsertMany(i interface{}) (InsertManyResult, erro
 }
 
 func (cc *callbacksCollection) Find(i ...interface{}) Result {
-	return &callbacksResult{cc: cc, conditions: i}
+	scope := &Scope{
+		Action:     ActionFind,
+		Coll:       cc.rawColl,
+		Conditions: i,
+	}
+	return &callbacksResult{
+		cc:    cc,
+		scope: scope,
+	}
 }
 
 type callbacksResult struct {
-	cc         *callbacksCollection
-	conditions []interface{}
-	projection []string
-	orderBys   []string
-	pageNum    uint
-	pageSize   uint
-	unscoped   bool
+	cc    *callbacksCollection
+	scope *Scope
 }
 
 func (cr *callbacksResult) And(i ...interface{}) Result {
-	cr.conditions = append(cr.conditions, And(i...))
+	cr.scope.Conditions = append(cr.scope.Conditions, And(i...))
 	return cr
 }
 
 func (cr *callbacksResult) Or(i ...interface{}) Result {
-	cr.conditions = append(cr.conditions, Or(i...))
+	cr.scope.Conditions = append(cr.scope.Conditions, Or(i...))
 	return cr
 }
 
 func (cr *callbacksResult) Project(p ...string) Result {
-	cr.projection = p
+	cr.scope.Projection = p
 	return cr
 }
 
 func (cr *callbacksResult) One(dst interface{}) error {
-	panic("implement me")
+	cr.scope.Store().Store("db:dst", dst)
+	cr.cc.callbacks.Query().Execute(cr.cc.NewScope(cr.scope))
+	return cr.scope.Error
 }
 
 func (cr *callbacksResult) All(dst interface{}) error {
-	panic("implement me")
+	cr.scope.Store().Store("db:dst", dst)
+	cr.cc.callbacks.Query().Execute(cr.cc.NewScope(cr.scope))
+	return cr.scope.Error
 }
 
 func (cr *callbacksResult) Cursor() (Cursor, error) {
-	panic("implement me")
+	cr.scope.Store().Store("db:is_cur", true)
+	cr.cc.callbacks.Query().Execute(cr.cc.NewScope(cr.scope))
+	var cur Cursor
+	if !cr.scope.HasError() {
+		if v, has := cr.scope.Store().Load("db:cur"); has {
+			cur = v.(Cursor)
+		}
+	}
+	return cur, cr.scope.Error
 }
 
 func (cr *callbacksResult) OrderBy(s ...string) Result {
-	cr.orderBys = append(cr.orderBys, s...)
+	cr.scope.OrderBys = append(cr.scope.OrderBys, s...)
 	return cr
 }
 
 func (cr *callbacksResult) Count() (int, error) {
-	panic("implement me")
+	cr.cc.callbacks.Query().Execute(cr.cc.NewScope(cr.scope))
+	return cr.scope.TotalRecords, cr.scope.Error
 }
 
 func (cr *callbacksResult) Paginate(u uint) Result {
-	cr.pageSize = u
+	cr.scope.PageSize = u
 	return cr
 }
 
 func (cr *callbacksResult) Page(u uint) Result {
-	cr.pageNum = u
+	cr.scope.PageNum = u
 	return cr
 }
 
@@ -168,44 +189,53 @@ func (cr *callbacksResult) TotalRecords() (int, error) {
 }
 
 func (cr *callbacksResult) TotalPages() (int, error) {
-	panic("implement me")
+	cr.cc.callbacks.Query().Execute(cr.cc.NewScope(cr.scope))
+	return cr.scope.TotalPages, cr.scope.Error
 }
 
 func (cr *callbacksResult) UpdateOne(i interface{}) (int, error) {
-	panic("implement me")
+	cr.scope.Action = ActionUpdateOne
+	cr.cc.callbacks.Update().Execute(cr.cc.NewScope(cr.scope))
+	return cr.scope.RecordsAffected, cr.scope.Error
 }
 
 func (cr *callbacksResult) UpdateMany(i interface{}) (int, error) {
-	panic("implement me")
+	cr.scope.Action = ActionUpdateMany
+	cr.cc.callbacks.Update().Execute(cr.cc.NewScope(cr.scope))
+	return cr.scope.RecordsAffected, cr.scope.Error
 }
 
 func (cr *callbacksResult) Unscoped() Result {
-	cr.unscoped = true
+	cr.scope.Unscoped = true
 	return cr
 }
 
 func (cr *callbacksResult) DeleteOne() (int, error) {
-	panic("implement me")
+	cr.scope.Action = ActionDeleteOne
+	cr.cc.callbacks.Delete().Execute(cr.cc.NewScope(cr.scope))
+	return cr.scope.RecordsAffected, cr.scope.Error
 }
 
 func (cr *callbacksResult) DeleteMany() (int, error) {
-	panic("implement me")
+	cr.scope.Action = ActionDeleteMany
+	cr.cc.callbacks.Delete().Execute(cr.cc.NewScope(cr.scope))
+	return cr.scope.RecordsAffected, cr.scope.Error
 }
 
-type callbacksCursor struct {
-}
-
-func (cur *callbacksCursor) HasNext() bool {
-	panic("implement me")
-}
-
-func (cur *callbacksCursor) Next(dst interface{}) error {
-	panic("implement me")
-}
-
-func (cur *callbacksCursor) Close() error {
-	panic("implement me")
-}
+//type callbacksCursor struct {
+//}
+//
+//func (cur *callbacksCursor) HasNext() bool {
+//	panic("implement me")
+//}
+//
+//func (cur *callbacksCursor) Next(dst interface{}) error {
+//	panic("implement me")
+//}
+//
+//func (cur *callbacksCursor) Close() error {
+//	panic("implement me")
+//}
 
 type processor struct {
 	sess      *Connection
@@ -251,6 +281,9 @@ func (cs *callbacks) Raw() *processor {
 func (p *processor) Execute(s *Scope) {
 	for _, f := range p.fns {
 		f(s)
+		if s.skipLeft {
+			break
+		}
 	}
 }
 
@@ -275,19 +308,19 @@ func (p *processor) Match(fc func(*Scope) bool) *callback {
 	return &callback{match: fc, processor: p}
 }
 
-func (p *processor) Register(name string, fn func(*Scope)) error {
-	return (&callback{processor: p}).Register(name, fn)
+func (p *processor) Register(name string, fn func(*Scope)) {
+	(&callback{processor: p}).Register(name, fn)
 }
 
-func (p *processor) Remove(name string) error {
-	return (&callback{processor: p}).Remove(name)
+func (p *processor) Remove(name string) {
+	(&callback{processor: p}).Remove(name)
 }
 
-func (p *processor) Replace(name string, fn func(*Scope)) error {
-	return (&callback{processor: p}).Replace(name, fn)
+func (p *processor) Replace(name string, fn func(*Scope)) {
+	(&callback{processor: p}).Replace(name, fn)
 }
 
-func (p *processor) compile() (err error) {
+func (p *processor) compile() {
 	var callbacks []*callback
 	s := &Scope{Session: p.sess}
 	for _, callback := range p.callbacks {
@@ -297,8 +330,9 @@ func (p *processor) compile() (err error) {
 	}
 	p.callbacks = callbacks
 
+	var err error
 	if p.fns, err = sortCallbacks(p.callbacks); err != nil {
-		return Errorf("compile callbacks error %v", err)
+		panic(Errorf("compile callbacks error %v", err))
 	}
 	return
 }
@@ -313,26 +347,26 @@ func (c *callback) After(name string) *callback {
 	return c
 }
 
-func (c *callback) Register(name string, fn func(*Scope)) error {
+func (c *callback) Register(name string, fn func(*Scope)) {
 	c.name = name
 	c.handler = fn
 	c.processor.callbacks = append(c.processor.callbacks, c)
-	return c.processor.compile()
+	c.processor.compile()
 }
 
-func (c *callback) Remove(name string) error {
+func (c *callback) Remove(name string) {
 	c.name = name
 	c.remove = true
 	c.processor.callbacks = append(c.processor.callbacks, c)
-	return c.processor.compile()
+	c.processor.compile()
 }
 
-func (c *callback) Replace(name string, fn func(*Scope)) error {
+func (c *callback) Replace(name string, fn func(*Scope)) {
 	c.name = name
 	c.handler = fn
 	c.replace = true
 	c.processor.callbacks = append(c.processor.callbacks, c)
-	return c.processor.compile()
+	c.processor.compile()
 }
 
 // getRIndex get right index from string slice

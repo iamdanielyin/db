@@ -64,7 +64,12 @@ func Connect(source DataSource) (*Connection, error) {
 		return nil, err
 	}
 	conn := &Connection{cacheStore: &sync.Map{}}
-	conn.client = callbackClientWrapper(client, conn)
+	callbacks := callbackClientWrapper(client, conn)
+	registerCreateCallbacks(callbacks)
+	registerQueryCallbacks(callbacks)
+	registerUpdateCallbacks(callbacks)
+	registerDeleteCallbacks(callbacks)
+	conn.client = callbacks
 	connMap[source.Name] = conn
 	return conn, nil
 }

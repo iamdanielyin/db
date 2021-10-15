@@ -5,6 +5,7 @@ go 1.17
 require (
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
 	github.com/go-stack/stack v1.8.0 // indirect
+	github.com/gobwas/glob v0.2.3
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/imdario/mergo v0.3.12
 	github.com/klauspost/compress v1.13.6 // indirect
