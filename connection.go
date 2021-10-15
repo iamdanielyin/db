@@ -19,8 +19,7 @@ var (
 )
 
 type Connection struct {
-	client Client
-	//callbacks  *callbacks
+	client     Client
 	cacheStore *sync.Map
 }
 
@@ -33,27 +32,11 @@ func (c *Connection) Disconnect() error {
 }
 
 func (c *Connection) StartTransaction() (Tx, error) {
-	return nil, nil
+	return c.client.StartTransaction()
 }
 
-func (c *Connection) WithTransaction(fn func(Tx) error) (err error) {
-	var tx Tx
-	tx, err = c.StartTransaction()
-	if err != nil {
-		return
-	}
-
-	defer func() {
-		if err != nil {
-			if e := tx.Rollback(); e != nil {
-				err = Errorf("%v; %w", err, e)
-			}
-		} else {
-			err = tx.Commit()
-		}
-	}()
-	err = fn(tx)
-	return
+func (c *Connection) WithTransaction(fn func(Tx) error) error {
+	return c.client.WithTransaction(fn)
 }
 
 func Connect(source DataSource) (*Connection, error) {
@@ -80,10 +63,8 @@ func Connect(source DataSource) (*Connection, error) {
 	if err != nil {
 		return nil, err
 	}
-	conn := &Connection{
-		client:     client,
-		cacheStore: &sync.Map{},
-	}
+	conn := &Connection{cacheStore: &sync.Map{}}
+	conn.client = callbackClientWrapper(client, conn)
 	connMap[source.Name] = conn
 	return conn, nil
 }

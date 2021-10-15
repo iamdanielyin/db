@@ -11,6 +11,8 @@ type Client interface {
 	Name() string
 	Source() DataSource
 	Disconnect(context.Context) error
+	StartTransaction() (Tx, error)
+	WithTransaction(func(Tx) error) error
 	Model(Metadata) Collection
 }
 

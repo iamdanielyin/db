@@ -150,6 +150,14 @@ func RegisterMetadata(sourceName string, metadata interface{}) error {
 	return Session(sourceName).RegisterMetadata(metadata)
 }
 
+func UnregisterMetadata(name string) {
+	metadataMapMu.Lock()
+	defer metadataMapMu.Unlock()
+
+	name = strings.TrimSpace(name)
+	delete(metadataMap, name)
+}
+
 func LookupMetadata(name string) (meta Metadata, err error) {
 	metadataMapMu.RLock()
 	defer metadataMapMu.RUnlock()

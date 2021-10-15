@@ -1,13 +1,25 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"time"
 )
 
-func initializeCallbacks(sess *Connection) *callbacks {
+const (
+	ActionInsertOne  = "insert-one"
+	ActionInsertMany = "insert-many"
+	ActionUpdateOne  = "update-one"
+	ActionUpdateMany = "update-many"
+	ActionDeleteOne  = "delete-one"
+	ActionDeleteMany = "delete-many"
+	ActionFind       = "find"
+)
+
+func callbackClientWrapper(raw Client, sess *Connection) *callbacks {
 	return &callbacks{
+		rawClient: raw,
 		processors: map[string]*processor{
 			"create": {sess: sess},
 			"query":  {sess: sess},
@@ -21,6 +33,178 @@ func initializeCallbacks(sess *Connection) *callbacks {
 
 type callbacks struct {
 	processors map[string]*processor
+	rawClient  Client
+}
+
+func (cs *callbacks) Name() string {
+	return cs.rawClient.Name()
+}
+
+func (cs *callbacks) Source() DataSource {
+	return cs.rawClient.Source()
+}
+
+func (cs *callbacks) Disconnect(ctx context.Context) error {
+	return cs.rawClient.Disconnect(ctx)
+}
+
+func (cs *callbacks) Model(metadata Metadata) Collection {
+	rawColl := cs.rawClient.Model(metadata)
+	return &callbacksCollection{callbacks: cs, rawColl: rawColl}
+}
+
+func (cs *callbacks) StartTransaction() (Tx, error) {
+	panic("implement me")
+}
+
+func (cs *callbacks) WithTransaction(f func(Tx) error) error {
+	panic("implement me")
+}
+
+type callbacksCollection struct {
+	callbacks *callbacks
+	rawColl   Collection
+}
+
+func (cc *callbacksCollection) NewScope(scope *Scope) *Scope {
+	scope.StartTime = time.Now()
+	scope.Session = cc.Session()
+	scope.Metadata = cc.Metadata()
+	return scope
+}
+
+func (cc *callbacksCollection) Name() string {
+	return cc.rawColl.Name()
+}
+
+func (cc *callbacksCollection) Metadata() Metadata {
+	return cc.rawColl.Metadata()
+}
+
+func (cc *callbacksCollection) Session() *Connection {
+	return cc.rawColl.Session()
+}
+
+func (cc *callbacksCollection) InsertOne(i interface{}) (InsertOneResult, error) {
+	scope := &Scope{
+		Action:       ActionInsertOne,
+		InsertOneDoc: i,
+	}
+	cc.callbacks.Create().Execute(cc.NewScope(scope))
+	return scope.InsertOneResult, scope.Error
+}
+
+func (cc *callbacksCollection) InsertMany(i interface{}) (InsertManyResult, error) {
+	scope := &Scope{
+		Action:         ActionInsertMany,
+		InsertManyDocs: i,
+	}
+	cc.callbacks.Create().Execute(cc.NewScope(scope))
+	return scope.InsertManyResult, scope.Error
+}
+
+func (cc *callbacksCollection) Find(i ...interface{}) Result {
+	return &callbacksResult{cc: cc, conditions: i}
+}
+
+type callbacksResult struct {
+	cc         *callbacksCollection
+	conditions []interface{}
+	projection []string
+	orderBys   []string
+	pageNum    uint
+	pageSize   uint
+	unscoped   bool
+}
+
+func (cr *callbacksResult) And(i ...interface{}) Result {
+	cr.conditions = append(cr.conditions, And(i...))
+	return cr
+}
+
+func (cr *callbacksResult) Or(i ...interface{}) Result {
+	cr.conditions = append(cr.conditions, Or(i...))
+	return cr
+}
+
+func (cr *callbacksResult) Project(p ...string) Result {
+	cr.projection = p
+	return cr
+}
+
+func (cr *callbacksResult) One(dst interface{}) error {
+	panic("implement me")
+}
+
+func (cr *callbacksResult) All(dst interface{}) error {
+	panic("implement me")
+}
+
+func (cr *callbacksResult) Cursor() (Cursor, error) {
+	panic("implement me")
+}
+
+func (cr *callbacksResult) OrderBy(s ...string) Result {
+	cr.orderBys = append(cr.orderBys, s...)
+	return cr
+}
+
+func (cr *callbacksResult) Count() (int, error) {
+	panic("implement me")
+}
+
+func (cr *callbacksResult) Paginate(u uint) Result {
+	cr.pageSize = u
+	return cr
+}
+
+func (cr *callbacksResult) Page(u uint) Result {
+	cr.pageNum = u
+	return cr
+}
+
+func (cr *callbacksResult) TotalRecords() (int, error) {
+	return cr.Count()
+}
+
+func (cr *callbacksResult) TotalPages() (int, error) {
+	panic("implement me")
+}
+
+func (cr *callbacksResult) UpdateOne(i interface{}) (int, error) {
+	panic("implement me")
+}
+
+func (cr *callbacksResult) UpdateMany(i interface{}) (int, error) {
+	panic("implement me")
+}
+
+func (cr *callbacksResult) Unscoped() Result {
+	cr.unscoped = true
+	return cr
+}
+
+func (cr *callbacksResult) DeleteOne() (int, error) {
+	panic("implement me")
+}
+
+func (cr *callbacksResult) DeleteMany() (int, error) {
+	panic("implement me")
+}
+
+type callbacksCursor struct {
+}
+
+func (cur *callbacksCursor) HasNext() bool {
+	panic("implement me")
+}
+
+func (cur *callbacksCursor) Next(dst interface{}) error {
+	panic("implement me")
+}
+
+func (cur *callbacksCursor) Close() error {
+	panic("implement me")
 }
 
 type processor struct {
@@ -65,8 +249,6 @@ func (cs *callbacks) Raw() *processor {
 }
 
 func (p *processor) Execute(s *Scope) {
-	s.StartTime = time.Now()
-
 	for _, f := range p.fns {
 		f(s)
 	}
