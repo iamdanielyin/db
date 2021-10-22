@@ -55,11 +55,6 @@ type Metadata struct {
 	Properties  Fields
 }
 
-type MetadataHook struct {
-	Fields []string
-	Fn     func(*Scope)
-}
-
 type MetadataInterface interface {
 	Metadata() Metadata
 }
