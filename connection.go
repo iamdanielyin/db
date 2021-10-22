@@ -100,8 +100,6 @@ func (c *Connection) RegisterMetadata(metaOrStruct interface{}) error {
 	if metaOrStruct == nil {
 		return nil
 	}
-	metadataMapMu.Lock()
-	defer metadataMapMu.Unlock()
 
 	var metadata Metadata
 	switch v := metaOrStruct.(type) {
@@ -126,7 +124,13 @@ func (c *Connection) RegisterMetadata(metaOrStruct interface{}) error {
 	if _, err := govalidator.ValidateStruct(&metadata); err != nil {
 		return Errorf(err.Error())
 	}
+
+	metadataMapMu.Lock()
 	metadataMap[metadata.Name] = metadata
+	metadataMapMu.Unlock()
+
+	matchLogicDeleteRules()
+
 	return nil
 }
 
