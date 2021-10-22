@@ -130,6 +130,7 @@ func (c *Connection) RegisterMetadata(metaOrStruct interface{}) error {
 	metadataMapMu.Unlock()
 
 	matchLogicDeleteRules()
+	matchMetadataHooks()
 
 	return nil
 }

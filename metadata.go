@@ -24,19 +24,6 @@ const (
 	//ArrayArray     = "[array]"
 )
 
-const (
-	HookBeforeSave   = "before:save"
-	HookBeforeCreate = "before:create"
-	HookAfterCreate  = "after:create"
-	HookAfterSave    = "after:save"
-	HookBeforeUpdate = "before:update"
-	HookAfterUpdate  = "after:update"
-	HookBeforeFind   = "before:find"
-	HookAfterFind    = "after:find"
-	HookBeforeDelete = "before:delete"
-	HookAfterDelete  = "after:delete"
-)
-
 var (
 	metadataMap   = make(map[string]Metadata)
 	metadataMapMu sync.RWMutex

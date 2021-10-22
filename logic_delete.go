@@ -2,6 +2,7 @@ package db
 
 import (
 	"github.com/gobwas/glob"
+	"strings"
 	"sync"
 )
 
@@ -18,6 +19,7 @@ type LogicDeleteRule struct {
 }
 
 func RegisterLoginDeleteRule(pattern string, deleteRule *LogicDeleteRule) {
+	pattern = strings.TrimSpace(pattern)
 	if pattern != "" {
 		deleteRule.Pattern = pattern
 	}
