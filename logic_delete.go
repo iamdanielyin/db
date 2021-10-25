@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	loginDeleteRules   = make([]*LogicDeleteRule, 0)
-	loginDeleteRulesMu sync.RWMutex
+	logicDeleteRuleMap   = make(map[string]*LogicDeleteRule)
+	logicDeleteRuleMapMu sync.RWMutex
 )
 
 type LogicDeleteRule struct {
@@ -18,66 +18,37 @@ type LogicDeleteRule struct {
 	GetValue interface{} // 元素可能为 Cond 或 Union
 }
 
-func RegisterLoginDeleteRule(pattern string, deleteRule *LogicDeleteRule) {
+func RegisterLoginDeleteRule(pattern string, rule *LogicDeleteRule) {
+	logicDeleteRuleMapMu.Lock()
+	defer logicDeleteRuleMapMu.Unlock()
 	pattern = strings.TrimSpace(pattern)
+
 	if pattern != "" {
-		deleteRule.Pattern = pattern
+		rule.Pattern = pattern
 	}
-	if deleteRule.Pattern == "" || deleteRule == nil {
+	if rule.Pattern == "" || rule == nil {
 		return
 	}
 
-	loginDeleteRulesMu.Lock()
-	loginDeleteRules = append(loginDeleteRules, deleteRule)
-	loginDeleteRulesMu.Unlock()
-
-	matchLogicDeleteRules()
-}
-
-func matchLogicDeleteRules(names ...string) {
-	metadataMapMu.Lock()
-	loginDeleteRulesMu.Lock()
-	defer func() {
-		metadataMapMu.Unlock()
-		loginDeleteRulesMu.Unlock()
-	}()
-
-	var nameMap = make(map[string]bool)
-	for _, k := range names {
-		nameMap[k] = true
-	}
-
-	for k, v := range metadataMap {
-		if len(names) > 0 && !nameMap[k] {
-			continue
-		}
-		if v.logicDeleteRule != nil && v.logicDeleteRule.Pattern == v.Name {
-			// 指定元数据为最高优先级
-			continue
-		}
-		var globalRule *LogicDeleteRule
-		for _, rule := range loginDeleteRules {
-			if rule.Pattern == "*" {
-				globalRule = rule
-				break
-			}
-		}
-
-		for _, rule := range loginDeleteRules {
-			if rule.Pattern == "*" {
-
-			}
-			g := glob.MustCompile(rule.Pattern)
-			if g.Match(v.Name) {
-				if v.logicDeleteRule == nil || (v.logicDeleteRule != nil && v.logicDeleteRule.Pattern == "*") {
-					v.logicDeleteRule = rule
+	metadataMapMu.RLock()
+	for _, v := range metadataMap {
+		g := glob.MustCompile(rule.Pattern)
+		if g.Match(v.Name) {
+			if exists := logicDeleteRuleMap[v.Name]; exists != nil {
+				if exists.Pattern == v.Name {
+					// 指定元数据为最高优先级
+					continue
+				} else if exists.Pattern == "*" && rule.Pattern != "*" {
+					logicDeleteRuleMap[v.Name] = rule
 				}
-			} else if globalRule != nil {
-				v.logicDeleteRule = globalRule
+			} else {
+				logicDeleteRuleMap[v.Name] = rule
 			}
+			continue
 		}
-
-		metadataMap[k] = v
 	}
-
+	if _, isMetaRule := metadataMap[rule.Pattern]; !isMetaRule {
+		logicDeleteRuleMap[rule.Pattern] = rule
+	}
+	metadataMapMu.RUnlock()
 }

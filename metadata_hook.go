@@ -19,19 +19,29 @@ const (
 	HookAfterDelete  = "afterDelete"
 )
 
-var (
-	metadataHooks   = make([]*MetadataHook, 0)
-	metadataHooksMu sync.RWMutex
+const (
+	HookFieldOperatorOr  = "OR"
+	HookFieldOperatorAnd = "AND"
 )
 
+var (
+	metadataHookMap   = make(map[string]MetadataHooks)
+	metadataHookMapMu sync.RWMutex
+)
+
+type MetadataHooks map[string][]*MetadataHook
+
 type MetadataHook struct {
-	Pattern string
-	Action  string
-	Fields  string
-	Fn      func(*Scope)
+	Pattern       string
+	Action        string
+	Fields        []string
+	FieldOperator string
+	Fn            func(*Scope)
 }
 
 func RegisterMiddleware(pattern string, fn func(*Scope)) error {
+	metadataHookMapMu.Lock()
+	defer metadataHookMapMu.Unlock()
 	pattern = strings.TrimSpace(pattern)
 	if pattern == "" || fn == nil {
 		return nil
@@ -70,41 +80,49 @@ func RegisterMiddleware(pattern string, fn func(*Scope)) error {
 		Fn:      fn,
 	}
 	if len(split) > 2 {
-		hook.Fields = strings.TrimSpace(split[2])
+		split[2] = strings.TrimSpace(split[2])
+		if idx := strings.Index(split[2], ","); idx >= 0 {
+			hook.Fields = strings.Split(split[2], ",")
+			hook.FieldOperator = HookFieldOperatorAnd
+		} else {
+			hook.Fields = strings.Split(split[2], "|")
+			hook.FieldOperator = HookFieldOperatorOr
+		}
+		for i, item := range hook.Fields {
+			item = strings.TrimSpace(item)
+			hook.Fields[i] = item
+		}
 	}
-
-	metadataHooksMu.Lock()
-	metadataHooks = append(metadataHooks, hook)
-	metadataHooksMu.Unlock()
-
-	matchMetadataHooks()
+	metadataMapMu.RLock()
+	for _, v := range metadataMap {
+		g := glob.MustCompile(hook.Pattern)
+		if g.Match(v.Name) {
+			if metadataHookMap[v.Name] == nil {
+				metadataHookMap[v.Name] = make(MetadataHooks)
+			}
+			metadataHookMap[v.Name][hook.Action] = append(metadataHookMap[v.Name][hook.Action], hook)
+			continue
+		}
+	}
+	metadataMapMu.RUnlock()
 	return nil
 }
 
-func matchMetadataHooks(names ...string) {
-	metadataMapMu.Lock()
-	metadataHooksMu.Lock()
-	defer func() {
-		metadataMapMu.Unlock()
-		metadataHooksMu.Unlock()
-	}()
+func callMetadataHooks(name, kind string, scope *Scope) {
+	metadataHookMapMu.RLock()
+	defer metadataHookMapMu.RUnlock()
 
-	var nameMap = make(map[string]bool)
-	for _, k := range names {
-		nameMap[k] = true
+	var hooks []*MetadataHook
+	if v := metadataHookMap[name]; v != nil {
+		hooks = v[kind]
 	}
 
-	for k, v := range metadataMap {
-		if len(names) > 0 && !nameMap[k] {
-			continue
+	for _, hook := range hooks {
+		if len(hook.Fields) > 0 {
+			// 字段中间件
+		} else {
+			// 元数据中间件
+			hook.Fn(scope)
 		}
-		for _, hook := range metadataHooks {
-			g := glob.MustCompile(hook.Pattern)
-			if g.Match(v.Name) {
-				v.hooks = append(v.hooks, hook)
-				continue
-			}
-		}
-		metadataMap[k] = v
 	}
 }

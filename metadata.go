@@ -32,8 +32,6 @@ var (
 type Metadata struct {
 	source           *Connection
 	nativeProperties Fields
-	hooks            []*MetadataHook
-	logicDeleteRule  *LogicDeleteRule
 
 	Name        string `valid:"required,!empty"`
 	NativeName  string
@@ -46,23 +44,38 @@ type MetadataInterface interface {
 	Metadata() Metadata
 }
 
-func (m Metadata) Session() *Connection {
+func (m *Metadata) Session() *Connection {
 	return m.source
 }
 
-func (m Metadata) MustNativeName() string {
+func (m *Metadata) MustNativeName() string {
 	if m.NativeName != "" {
 		return m.NativeName
 	}
 	return m.Name
 }
 
-func (m Metadata) FieldByName(name string) (f Field, has bool) {
+func (m *Metadata) FieldByName(name string) (f Field, has bool) {
 	f, has = m.Properties[name]
 	if !has {
 		f, has = m.nativeProperties[name]
 	}
 	return
+}
+
+func (m *Metadata) callHooks(kind string) {
+	switch kind {
+	case HookBeforeSave:
+	case HookBeforeCreate:
+	case HookAfterCreate:
+	case HookAfterSave:
+	case HookBeforeUpdate:
+	case HookAfterUpdate:
+	case HookBeforeFind:
+	case HookAfterFind:
+	case HookBeforeDelete:
+	case HookAfterDelete:
+	}
 }
 
 type Fields map[string]Field
