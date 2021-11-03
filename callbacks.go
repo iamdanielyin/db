@@ -9,13 +9,13 @@ import (
 )
 
 const (
-	ActionInsertOne  = "insert-one"
-	ActionInsertMany = "insert-many"
-	ActionUpdateOne  = "update-one"
-	ActionUpdateMany = "update-many"
-	ActionDeleteOne  = "delete-one"
-	ActionDeleteMany = "delete-many"
-	ActionFind       = "find"
+	ActionInsertOne  = "INSERT_ONE"
+	ActionInsertMany = "INSERT_MANY"
+	ActionUpdateOne  = "UPDATE_ONE"
+	ActionUpdateMany = "UPDATE_MANY"
+	ActionDeleteOne  = "DELETE_ONE"
+	ActionDeleteMany = "DELETE_MANY"
+	ActionFind       = "FIND"
 )
 
 func callbackClientWrapper(raw Client, sess *Connection) *callbacks {

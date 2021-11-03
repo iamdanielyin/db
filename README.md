@@ -610,7 +610,7 @@ db.RegisterLogicDeleteRule("User", &db.LogicDeleteRule{
 ```
 注意：
 
-- `RegisterLoginDeleteRule`第一个参数为Glob语法（具体用法请参考[https://github.com/gobwas/glob](https://github.com/gobwas/glob)）；
+- `RegisterLogicDeleteRule`第一个参数为Glob语法（具体用法请参考[https://github.com/gobwas/glob](https://github.com/gobwas/glob)）；
 - 每个元数据只会有**一条**规则生效，规则优先级为`元数据规则 > 组规则 > 全局规则`；
 - `SetValue`的可选值如下：
    - `$now` - 当前时间Unix时间戳；
@@ -812,10 +812,11 @@ db.RegisterMiddleware("User:beforeUpdate:PhoneNumber|EmailAddress", func(scope *
    - 传入多个字段名，以英文逗号`,`分隔：表示仅指定的所有字段均发生变化时触发；
    - 传入多个字段名，以英文竖线`|`分隔：表示指定的所有字段中某一个发生变化时触发。
 - 字段规则在不同CRUD操作时匹配的位置不同：
-   - `insert-xxx` - 匹配`InsertDocs`；
+   - `insert-one` - 匹配`InsertOneDoc`；
+   - `insert-many` - 匹配`InsertManyDocs`；
    - `update-xxx` - 匹配`UpdateDoc`；
-   - `delete-xxx` - 匹配`Conds`。
-<a name="htZqq"></a>
+   - `delete-xxx` - 匹配`Conditions`。
+  <a name="htZqq"></a>
 # 元数据关联
 在常见的ORM框架中，我们常常听到以下几种关联关系：
 

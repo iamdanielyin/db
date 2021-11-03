@@ -35,6 +35,11 @@ func IsNil(i interface{}) bool {
 	vi := reflect.ValueOf(i)
 	return vi.IsNil()
 }
+
+func JSONAPI() jsoniter.API {
+	return json
+}
+
 func JSONCopy(src, dst interface{}) (err error) {
 	var data []byte
 	if data, err = json.Marshal(src); err == nil {
@@ -55,4 +60,12 @@ func JSONStringify(value interface{}, format bool) string {
 
 func JSONParse(v string, r interface{}) error {
 	return json.Unmarshal([]byte(v), r)
+}
+
+func JSONMarshal(v interface{}) ([]byte, error) {
+	return json.Marshal(v)
+}
+
+func JSONMarshalIndent(v interface{}, prefix, indent string) ([]byte, error) {
+	return json.MarshalIndent(v, prefix, indent)
 }

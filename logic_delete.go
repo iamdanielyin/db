@@ -18,11 +18,11 @@ type LogicDeleteRule struct {
 	GetValue interface{} // 元素可能为 Cond 或 Union
 }
 
-func RegisterLoginDeleteRule(pattern string, rule *LogicDeleteRule) {
+func RegisterLogicDeleteRule(pattern string, rule *LogicDeleteRule) {
 	logicDeleteRuleMapMu.Lock()
 	defer logicDeleteRuleMapMu.Unlock()
-	pattern = strings.TrimSpace(pattern)
 
+	pattern = strings.TrimSpace(pattern)
 	if pattern != "" {
 		rule.Pattern = pattern
 	}
@@ -51,4 +51,11 @@ func RegisterLoginDeleteRule(pattern string, rule *LogicDeleteRule) {
 		logicDeleteRuleMap[rule.Pattern] = rule
 	}
 	metadataMapMu.RUnlock()
+}
+
+func LookupLogicDeleteRule(name string) *LogicDeleteRule {
+	logicDeleteRuleMapMu.RLock()
+	defer logicDeleteRuleMapMu.RUnlock()
+
+	return logicDeleteRuleMap[name]
 }
