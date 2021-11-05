@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/yuyitech/db"
 	_ "github.com/yuyitech/db/adapter/mongo"
 	"log"
@@ -33,15 +32,6 @@ func main() {
 	if err := sess.RegisterMetadata(&Member{}); err != nil {
 		log.Fatalf("元数据注册失败：%v\n", err)
 	}
-
-	// 注册全局Hook
-	db.RegisterMiddleware("*:before*", func(s *db.Scope) {
-		fmt.Printf("global before...%s\n", s.Action)
-	})
-
-	db.RegisterMiddleware("*:after*", func(s *db.Scope) {
-		fmt.Printf("global after...%s\n", s.Action)
-	})
 
 	// 新增数据
 	if res, err := db.Model("Member").InsertMany([]Member{

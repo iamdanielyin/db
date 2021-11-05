@@ -96,7 +96,16 @@ func Disconnect(names ...string) error {
 	return nil
 }
 
-func (c *Connection) RegisterMetadata(metaOrStruct interface{}) error {
+func (c *Connection) RegisterMetadata(metaOrStructs ...interface{}) error {
+	for _, item := range metaOrStructs {
+		if err := c.registerMetadata(item); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Connection) registerMetadata(metaOrStruct interface{}) error {
 	if metaOrStruct == nil {
 		return nil
 	}

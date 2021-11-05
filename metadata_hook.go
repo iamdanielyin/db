@@ -80,25 +80,33 @@ func RegisterMiddleware(pattern string, fn func(*Scope)) error {
 		return Errorf(`invalid middleware pattern: %s`, pattern)
 	}
 
+	var (
+		rule          = split[0]
+		fields        []string
+		fieldOperator string
+	)
+	if len(split) > 2 {
+		split[2] = strings.TrimSpace(split[2])
+		if idx := strings.Index(split[2], "|"); idx >= 0 {
+			fields = strings.Split(split[2], "|")
+			fieldOperator = HookFieldOperatorOr
+		} else {
+			fields = strings.Split(split[2], ",")
+			fieldOperator = HookFieldOperatorAnd
+		}
+		for i, item := range fields {
+			item = strings.TrimSpace(item)
+			fields[i] = item
+		}
+	}
+
 	for _, action := range matchActions {
 		hook := &MetadataHook{
-			Pattern: split[0],
-			Action:  action,
-			Fn:      fn,
-		}
-		if len(split) > 2 {
-			split[2] = strings.TrimSpace(split[2])
-			if idx := strings.Index(split[2], "|"); idx >= 0 {
-				hook.Fields = strings.Split(split[2], "|")
-				hook.FieldOperator = HookFieldOperatorOr
-			} else {
-				hook.Fields = strings.Split(split[2], ",")
-				hook.FieldOperator = HookFieldOperatorAnd
-			}
-			for i, item := range hook.Fields {
-				item = strings.TrimSpace(item)
-				hook.Fields[i] = item
-			}
+			Pattern:       rule,
+			Action:        action,
+			Fn:            fn,
+			Fields:        fields,
+			FieldOperator: fieldOperator,
 		}
 		metadataMapMu.RLock()
 		for _, v := range metadataMap {
@@ -134,6 +142,9 @@ func filterFields(hook *MetadataHook, action string, value interface{}) bool {
 			for _, name := range hook.Fields {
 				field, ok := s.FieldOk(name)
 				if !ok || field.IsZero() {
+					if hook.FieldOperator == HookFieldOperatorOr {
+						continue
+					}
 					return false
 				}
 				if hook.FieldOperator == HookFieldOperatorOr {
@@ -160,6 +171,9 @@ func filterFields(hook *MetadataHook, action string, value interface{}) bool {
 			exists := make(map[string]bool)
 			for _, name := range hook.Fields {
 				if _, _, _, err := jsonparser.Get(data, name); err != nil {
+					if hook.FieldOperator == HookFieldOperatorOr {
+						continue
+					}
 					return false
 				}
 				if hook.FieldOperator == HookFieldOperatorOr {
@@ -190,6 +204,9 @@ func filterFieldsByCond(hook *MetadataHook, condOrUnion interface{}) bool {
 		exists := make(map[string]bool)
 		for _, name := range hook.Fields {
 			if has := props[name]; !has {
+				if hook.FieldOperator == HookFieldOperatorOr {
+					continue
+				}
 				return false
 			}
 			if hook.FieldOperator == HookFieldOperatorOr {
