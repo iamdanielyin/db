@@ -16,8 +16,8 @@ const (
 	HookAfterSave    = "afterSave"
 	HookBeforeUpdate = "beforeUpdate"
 	HookAfterUpdate  = "afterUpdate"
-	HookBeforeFind   = "beforeFind"
-	HookAfterFind    = "afterFind"
+	HookBeforeQuery  = "beforeQuery"
+	HookAfterQuery   = "afterQuery"
 	HookBeforeDelete = "beforeDelete"
 	HookAfterDelete  = "afterDelete"
 )
@@ -26,6 +26,19 @@ const (
 	HookFieldOperatorOr  = "OR"
 	HookFieldOperatorAnd = "AND"
 )
+
+var AllHooks = []string{
+	HookBeforeSave,
+	HookBeforeCreate,
+	HookAfterCreate,
+	HookAfterSave,
+	HookBeforeUpdate,
+	HookAfterUpdate,
+	HookBeforeQuery,
+	HookAfterQuery,
+	HookBeforeDelete,
+	HookAfterDelete,
+}
 
 var (
 	metadataHookMap   = make(map[string]MetadataHooks)
@@ -55,59 +68,51 @@ func RegisterMiddleware(pattern string, fn func(*Scope)) error {
 	}
 	split[0] = strings.TrimSpace(split[0])
 	split[1] = strings.ToUpper(strings.TrimSpace(split[1]))
-	var matchAction string
-	for _, action := range []string{
-		HookBeforeSave,
-		HookBeforeCreate,
-		HookAfterCreate,
-		HookAfterSave,
-		HookBeforeUpdate,
-		HookAfterUpdate,
-		HookBeforeFind,
-		HookAfterFind,
-		HookBeforeDelete,
-		HookAfterDelete,
-	} {
-		if strings.ToUpper(action) == split[1] {
-			matchAction = action
-			break
+	var matchActions []string
+	for _, name := range AllHooks {
+		un := strings.ToUpper(name)
+		g := glob.MustCompile(split[1])
+		if g.Match(un) {
+			matchActions = append(matchActions, name)
 		}
 	}
-	if matchAction == "" {
+	if len(matchActions) == 0 {
 		return Errorf(`invalid middleware pattern: %s`, pattern)
 	}
 
-	hook := &MetadataHook{
-		Pattern: split[0],
-		Action:  matchAction,
-		Fn:      fn,
-	}
-	if len(split) > 2 {
-		split[2] = strings.TrimSpace(split[2])
-		if idx := strings.Index(split[2], "|"); idx >= 0 {
-			hook.Fields = strings.Split(split[2], "|")
-			hook.FieldOperator = HookFieldOperatorOr
-		} else {
-			hook.Fields = strings.Split(split[2], ",")
-			hook.FieldOperator = HookFieldOperatorAnd
+	for _, action := range matchActions {
+		hook := &MetadataHook{
+			Pattern: split[0],
+			Action:  action,
+			Fn:      fn,
 		}
-		for i, item := range hook.Fields {
-			item = strings.TrimSpace(item)
-			hook.Fields[i] = item
-		}
-	}
-	metadataMapMu.RLock()
-	for _, v := range metadataMap {
-		g := glob.MustCompile(hook.Pattern)
-		if g.Match(v.Name) {
-			if metadataHookMap[v.Name] == nil {
-				metadataHookMap[v.Name] = make(MetadataHooks)
+		if len(split) > 2 {
+			split[2] = strings.TrimSpace(split[2])
+			if idx := strings.Index(split[2], "|"); idx >= 0 {
+				hook.Fields = strings.Split(split[2], "|")
+				hook.FieldOperator = HookFieldOperatorOr
+			} else {
+				hook.Fields = strings.Split(split[2], ",")
+				hook.FieldOperator = HookFieldOperatorAnd
 			}
-			metadataHookMap[v.Name][hook.Action] = append(metadataHookMap[v.Name][hook.Action], hook)
-			continue
+			for i, item := range hook.Fields {
+				item = strings.TrimSpace(item)
+				hook.Fields[i] = item
+			}
 		}
+		metadataMapMu.RLock()
+		for _, v := range metadataMap {
+			g := glob.MustCompile(hook.Pattern)
+			if g.Match(v.Name) {
+				if metadataHookMap[v.Name] == nil {
+					metadataHookMap[v.Name] = make(MetadataHooks)
+				}
+				metadataHookMap[v.Name][hook.Action] = append(metadataHookMap[v.Name][hook.Action], hook)
+				continue
+			}
+		}
+		metadataMapMu.RUnlock()
 	}
-	metadataMapMu.RUnlock()
 	return nil
 }
 
@@ -231,34 +236,4 @@ func filterFieldsByCond(hook *MetadataHook, condOrUnion interface{}) bool {
 		}
 	}
 	return false
-}
-
-func callMetadataHooks(name, kind string, scope *Scope) {
-	metadataHookMapMu.RLock()
-	defer metadataHookMapMu.RUnlock()
-
-	var hooks []*MetadataHook
-	if v := metadataHookMap[name]; v != nil {
-		hooks = v[kind]
-	}
-
-	for _, hook := range hooks {
-		if len(hook.Fields) > 0 {
-			var result bool
-			switch scope.Action {
-			case ActionInsertOne:
-				result = filterFields(hook, scope.Action, scope.InsertOneDoc)
-			case ActionInsertMany:
-				result = filterFields(hook, scope.Action, scope.InsertManyDocs)
-			case ActionUpdateOne, ActionUpdateMany:
-				result = filterFields(hook, scope.Action, scope.UpdateDoc)
-			case ActionDeleteOne, ActionDeleteMany:
-				result = filterFields(hook, scope.Action, scope.Conditions)
-			}
-			if !result {
-				continue
-			}
-		}
-		hook.Fn(scope)
-	}
 }

@@ -11,7 +11,8 @@ func registerCreateCallbacks(callbacks *callbacks) *callbacks {
 }
 
 func beforeCreateCallback(s *Scope) {
-
+	s.callHooks(HookBeforeSave, s.Metadata.Name)
+	s.callHooks(HookBeforeCreate, s.Metadata.Name)
 }
 
 func createCallback(s *Scope) {
@@ -28,5 +29,6 @@ func createCallback(s *Scope) {
 }
 
 func afterCreateCallback(s *Scope) {
-
+	s.callHooks(HookAfterCreate, s.Metadata.Name)
+	s.callHooks(HookAfterSave, s.Metadata.Name)
 }

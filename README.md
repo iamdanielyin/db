@@ -732,8 +732,8 @@ n, _ := db.Session("test").Raw(...).Exec()
 - `afterUpdate` - 修改后调用
 - `beforeSave` - 新增、修改前皆调用
 - `afterSave` - 新增、修改后皆调用
-- `beforeFind` - 查询前调用
-- `afterFind` - 查询后调用
+- `beforeQuery` - 查询前调用
+- `afterQuery` - 查询后调用
 - `beforeDelete` - 删除前调用
 - `afterDelete` - 删除后调用
 

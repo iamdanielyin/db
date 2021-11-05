@@ -71,8 +71,8 @@ func (m *Metadata) callHooks(kind string) {
 	case HookAfterSave:
 	case HookBeforeUpdate:
 	case HookAfterUpdate:
-	case HookBeforeFind:
-	case HookAfterFind:
+	case HookBeforeQuery:
+	case HookAfterQuery:
 	case HookBeforeDelete:
 	case HookAfterDelete:
 	}

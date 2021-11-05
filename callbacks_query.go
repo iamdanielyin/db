@@ -1,25 +1,38 @@
 package db
 
 func registerQueryCallbacks(callbacks *callbacks) *callbacks {
+	processor := callbacks.Query()
+	processor.Register("db:before_query", beforeQueryCallback)
+	processor.Register("db:query", queryCallback)
+	processor.Register("db:after_query", afterQueryCallback)
 	return callbacks
 }
 
-func buildQueryResult(s *Scope) Result {
-	res := s.Coll.Find(s.Conditions...)
-	if s.Unscoped {
-		res.Unscoped()
+func beforeQueryCallback(s *Scope) {
+	s.callHooks(HookBeforeQuery, s.Metadata.Name)
+}
+
+func queryCallback(s *Scope) {
+	if s.HasError() {
+		return
 	}
-	if len(s.Projection) > 0 {
-		res.Project(s.Projection...)
+
+	res := s.buildQueryResult()
+
+	switch s.Action {
+	case ActionQueryOne:
+		s.Error = res.One(s.Dest)
+	case ActionQueryAll:
+		s.Error = res.All(s.Dest)
+	case ActionQueryCursor:
+		s.Cursor, s.Error = res.Cursor()
+	case ActionQueryCount:
+		s.TotalRecords, s.Error = res.TotalRecords()
+	case ActionQueryPage:
+		s.TotalPages, s.Error = res.TotalPages()
 	}
-	if len(s.OrderBys) > 0 {
-		res.OrderBy(s.OrderBys...)
-	}
-	if s.PageSize > 0 {
-		res.Paginate(s.PageSize)
-	}
-	if s.PageNum > 0 {
-		res.Page(s.PageNum)
-	}
-	return res
+}
+
+func afterQueryCallback(s *Scope) {
+	s.callHooks(HookAfterQuery, s.Metadata.Name)
 }

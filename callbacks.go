@@ -9,13 +9,17 @@ import (
 )
 
 const (
-	ActionInsertOne  = "INSERT_ONE"
-	ActionInsertMany = "INSERT_MANY"
-	ActionUpdateOne  = "UPDATE_ONE"
-	ActionUpdateMany = "UPDATE_MANY"
-	ActionDeleteOne  = "DELETE_ONE"
-	ActionDeleteMany = "DELETE_MANY"
-	ActionFind       = "FIND"
+	ActionInsertOne   = "INSERT_ONE"
+	ActionInsertMany  = "INSERT_MANY"
+	ActionUpdateOne   = "UPDATE_ONE"
+	ActionUpdateMany  = "UPDATE_MANY"
+	ActionDeleteOne   = "DELETE_ONE"
+	ActionDeleteMany  = "DELETE_MANY"
+	ActionQueryOne    = "QUERY_ONE"
+	ActionQueryAll    = "QUERY_ALL"
+	ActionQueryCursor = "QUERY_CURSOR"
+	ActionQueryCount  = "QUERY_COUNT"
+	ActionQueryPage   = "QUERY_PAGE"
 )
 
 func callbackClientWrapper(raw Client, sess *Connection) *callbacks {
@@ -55,11 +59,11 @@ func (cs *callbacks) Model(metadata Metadata) Collection {
 }
 
 func (cs *callbacks) StartTransaction() (Tx, error) {
-	panic("implement me")
+	return cs.rawClient.StartTransaction()
 }
 
 func (cs *callbacks) WithTransaction(f func(Tx) error) error {
-	panic("implement me")
+	return cs.rawClient.WithTransaction(f)
 }
 
 type callbacksCollection struct {
@@ -103,6 +107,7 @@ func (cc *callbacksCollection) InsertMany(i interface{}) (InsertManyResult, erro
 	scope := &Scope{
 		Action:         ActionInsertMany,
 		InsertManyDocs: i,
+		Coll:           cc.rawColl,
 	}
 	cc.callbacks.Create().Execute(cc.NewScope(scope))
 	return scope.InsertManyResult, scope.Error
@@ -110,7 +115,6 @@ func (cc *callbacksCollection) InsertMany(i interface{}) (InsertManyResult, erro
 
 func (cc *callbacksCollection) Find(i ...interface{}) Result {
 	scope := &Scope{
-		Action:     ActionFind,
 		Coll:       cc.rawColl,
 		Conditions: i,
 	}
@@ -140,38 +144,9 @@ func (cr *callbacksResult) Project(p ...string) Result {
 	return cr
 }
 
-func (cr *callbacksResult) One(dst interface{}) error {
-	cr.scope.Store().Store("db:dst", dst)
-	cr.cc.callbacks.Query().Execute(cr.cc.NewScope(cr.scope))
-	return cr.scope.Error
-}
-
-func (cr *callbacksResult) All(dst interface{}) error {
-	cr.scope.Store().Store("db:dst", dst)
-	cr.cc.callbacks.Query().Execute(cr.cc.NewScope(cr.scope))
-	return cr.scope.Error
-}
-
-func (cr *callbacksResult) Cursor() (Cursor, error) {
-	cr.scope.Store().Store("db:is_cur", true)
-	cr.cc.callbacks.Query().Execute(cr.cc.NewScope(cr.scope))
-	var cur Cursor
-	if !cr.scope.HasError() {
-		if v, has := cr.scope.Store().Load("db:cur"); has {
-			cur = v.(Cursor)
-		}
-	}
-	return cur, cr.scope.Error
-}
-
 func (cr *callbacksResult) OrderBy(s ...string) Result {
 	cr.scope.OrderBys = append(cr.scope.OrderBys, s...)
 	return cr
-}
-
-func (cr *callbacksResult) Count() (int, error) {
-	cr.cc.callbacks.Query().Execute(cr.cc.NewScope(cr.scope))
-	return cr.scope.TotalRecords, cr.scope.Error
 }
 
 func (cr *callbacksResult) Paginate(u uint) Result {
@@ -184,30 +159,59 @@ func (cr *callbacksResult) Page(u uint) Result {
 	return cr
 }
 
+func (cr *callbacksResult) Unscoped() Result {
+	cr.scope.Unscoped = true
+	return cr
+}
+
+func (cr *callbacksResult) One(dst interface{}) error {
+	cr.scope.Dest = dst
+	cr.scope.Action = ActionQueryOne
+	cr.cc.callbacks.Query().Execute(cr.cc.NewScope(cr.scope))
+	return cr.scope.Error
+}
+
+func (cr *callbacksResult) All(dst interface{}) error {
+	cr.scope.Dest = dst
+	cr.scope.Action = ActionQueryAll
+	cr.cc.callbacks.Query().Execute(cr.cc.NewScope(cr.scope))
+	return cr.scope.Error
+}
+
+func (cr *callbacksResult) Cursor() (Cursor, error) {
+	cr.scope.Action = ActionQueryCursor
+	cr.cc.callbacks.Query().Execute(cr.cc.NewScope(cr.scope))
+	return cr.scope.Cursor, cr.scope.Error
+}
+
+func (cr *callbacksResult) Count() (int, error) {
+	cr.scope.Action = ActionQueryCount
+	cr.cc.callbacks.Query().Execute(cr.cc.NewScope(cr.scope))
+	return cr.scope.TotalRecords, cr.scope.Error
+}
+
 func (cr *callbacksResult) TotalRecords() (int, error) {
 	return cr.Count()
 }
 
 func (cr *callbacksResult) TotalPages() (int, error) {
+	cr.scope.Action = ActionQueryPage
 	cr.cc.callbacks.Query().Execute(cr.cc.NewScope(cr.scope))
 	return cr.scope.TotalPages, cr.scope.Error
 }
 
 func (cr *callbacksResult) UpdateOne(i interface{}) (int, error) {
 	cr.scope.Action = ActionUpdateOne
+	cr.scope.UpdateDoc = i
 	cr.cc.callbacks.Update().Execute(cr.cc.NewScope(cr.scope))
 	return cr.scope.RecordsAffected, cr.scope.Error
 }
 
 func (cr *callbacksResult) UpdateMany(i interface{}) (int, error) {
 	cr.scope.Action = ActionUpdateMany
+	cr.scope.UpdateDoc = i
 	cr.cc.callbacks.Update().Execute(cr.cc.NewScope(cr.scope))
 	return cr.scope.RecordsAffected, cr.scope.Error
-}
-
-func (cr *callbacksResult) Unscoped() Result {
-	cr.scope.Unscoped = true
-	return cr
 }
 
 func (cr *callbacksResult) DeleteOne() (int, error) {
@@ -221,21 +225,6 @@ func (cr *callbacksResult) DeleteMany() (int, error) {
 	cr.cc.callbacks.Delete().Execute(cr.cc.NewScope(cr.scope))
 	return cr.scope.RecordsAffected, cr.scope.Error
 }
-
-//type callbacksCursor struct {
-//}
-//
-//func (cur *callbacksCursor) HasNext() bool {
-//	panic("implement me")
-//}
-//
-//func (cur *callbacksCursor) Next(dst interface{}) error {
-//	panic("implement me")
-//}
-//
-//func (cur *callbacksCursor) Close() error {
-//	panic("implement me")
-//}
 
 type processor struct {
 	sess      *Connection

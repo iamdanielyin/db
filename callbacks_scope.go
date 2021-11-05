@@ -30,6 +30,8 @@ type Scope struct {
 	RecordsAffected  int
 	TotalRecords     int
 	TotalPages       int
+	Dest             interface{}
+	Cursor           Cursor
 }
 
 func (s *Scope) Skip() {
@@ -61,4 +63,58 @@ func (s *Scope) AddError(err error) *Scope {
 		s.Error = Errorf("%v; %w", s.Error, err)
 	}
 	return s
+}
+
+func (s *Scope) buildQueryResult() Result {
+	res := s.Coll.Find(s.Conditions...)
+	if s.Unscoped {
+		res.Unscoped()
+	}
+	if len(s.Projection) > 0 {
+		res.Project(s.Projection...)
+	}
+	if len(s.OrderBys) > 0 {
+		res.OrderBy(s.OrderBys...)
+	}
+	if s.PageSize > 0 {
+		res.Paginate(s.PageSize)
+	}
+	if s.PageNum > 0 {
+		res.Page(s.PageNum)
+	}
+	return res
+}
+
+func (s *Scope) callHooks(kind, name string) {
+	if name == "" || kind == "" || s == nil {
+		return
+	}
+
+	metadataHookMapMu.RLock()
+	defer metadataHookMapMu.RUnlock()
+
+	var hooks []*MetadataHook
+	if v := metadataHookMap[name]; v != nil {
+		hooks = v[kind]
+	}
+
+	for _, hook := range hooks {
+		if len(hook.Fields) > 0 {
+			var result bool
+			switch s.Action {
+			case ActionInsertOne:
+				result = filterFields(hook, s.Action, s.InsertOneDoc)
+			case ActionInsertMany:
+				result = filterFields(hook, s.Action, s.InsertManyDocs)
+			case ActionUpdateOne, ActionUpdateMany:
+				result = filterFields(hook, s.Action, s.UpdateDoc)
+			case ActionDeleteOne, ActionDeleteMany:
+				result = filterFields(hook, s.Action, s.Conditions)
+			}
+			if !result {
+				continue
+			}
+		}
+		hook.Fn(s)
+	}
 }
