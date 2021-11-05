@@ -2,8 +2,10 @@ package db
 
 import (
 	"github.com/gobwas/glob"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 var (
@@ -16,6 +18,41 @@ type LogicDeleteRule struct {
 	Field    string
 	SetValue string
 	GetValue interface{} // 元素可能为 Cond 或 Union
+}
+
+func (rule *LogicDeleteRule) ParseSetValue() interface{} {
+	if rule.SetValue != "" {
+		var (
+			ss     = len(rule.SetValue)
+			vInt   = "$int"
+			vFloat = "$float"
+			vBool  = "$bool"
+		)
+		if rule.SetValue == "$ts" {
+			return time.Now().Unix()
+		} else if rule.SetValue == "$iso" {
+			return time.Now().UTC().Format(time.RFC3339)
+		} else if strings.HasPrefix(rule.SetValue, vInt) {
+			s := rule.SetValue[len(vInt)-1 : ss-1]
+			if v, err := strconv.Atoi(s); err == nil {
+				return v
+			}
+		} else if strings.HasPrefix(rule.SetValue, vFloat) {
+			s := rule.SetValue[len(vFloat)-1 : ss-1]
+			if v, err := strconv.Atoi(s); err == nil {
+				return v
+			}
+		} else if strings.HasPrefix(rule.SetValue, vBool) {
+			s := rule.SetValue[len(vBool)-1 : ss-1]
+			if v, err := strconv.ParseBool(s); err == nil {
+				return v
+			}
+		} else {
+			return rule.SetValue
+		}
+	}
+	return nil
+
 }
 
 func RegisterLogicDeleteRule(pattern string, rule *LogicDeleteRule) {

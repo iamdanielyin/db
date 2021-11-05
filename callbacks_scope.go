@@ -38,6 +38,14 @@ func (s *Scope) Skip() {
 	s.skipLeft = true
 }
 
+func (s *Scope) And(i ...interface{}) {
+	s.Conditions = append(s.Conditions, And(i...))
+}
+
+func (s *Scope) Or(i ...interface{}) {
+	s.Conditions = append(s.Conditions, Or(i...))
+}
+
 func (s *Scope) HasError() bool {
 	return s.Error != nil
 }

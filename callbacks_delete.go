@@ -4,10 +4,32 @@ func registerDeleteCallbacks(callbacks *callbacks) *callbacks {
 	processor := callbacks.Delete()
 	processor.Register("db:begin_transaction", beginTransactionCallback)
 	processor.Register("db:before_delete", beforeDeleteCallback)
+	processor.Register("db:logic_delete", logicDeleteCallback)
 	processor.Register("db:delete", deleteCallback)
 	processor.Register("db:after_delete", afterDeleteCallback)
 	processor.Register("db:commit_or_rollback_transaction", commitOrRollbackTransactionCallback)
 	return callbacks
+}
+
+func logicDeleteCallback(s *Scope) {
+	if s.Unscoped {
+		return
+	}
+
+	rule := LookupLogicDeleteRule(s.Metadata.Name)
+	if rule == nil {
+		return
+	}
+
+	if value := rule.ParseSetValue(); value != nil {
+		field := rule.Field
+		if f, has := s.Metadata.FieldByName(rule.Field); has {
+			field = f.MustNativeName()
+		}
+		s.UpdateDoc = map[string]interface{}{
+			field: value,
+		}
+	}
 }
 
 func beforeDeleteCallback(s *Scope) {
@@ -21,9 +43,17 @@ func deleteCallback(s *Scope) {
 	res := s.buildQueryResult()
 	switch s.Action {
 	case ActionDeleteOne:
-		s.RecordsAffected, s.Error = res.DeleteOne()
+		if s.UpdateDoc != nil {
+			s.RecordsAffected, s.Error = res.UpdateOne(s.UpdateDoc)
+		} else {
+			s.RecordsAffected, s.Error = res.DeleteOne()
+		}
 	case ActionDeleteMany:
-		s.RecordsAffected, s.Error = res.DeleteMany()
+		if s.UpdateDoc != nil {
+			s.RecordsAffected, s.Error = res.UpdateMany(s.UpdateDoc)
+		} else {
+			s.RecordsAffected, s.Error = res.DeleteMany()
+		}
 	}
 }
 

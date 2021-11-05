@@ -613,10 +613,12 @@ db.RegisterLogicDeleteRule("User", &db.LogicDeleteRule{
 - `RegisterLogicDeleteRule`第一个参数为Glob语法（具体用法请参考[https://github.com/gobwas/glob](https://github.com/gobwas/glob)）；
 - 每个元数据只会有**一条**规则生效，规则优先级为`元数据规则 > 组规则 > 全局规则`；
 - `SetValue`的可选值如下：
-   - `$now` - 当前时间Unix时间戳；
-   - `$int(v)` - 格式化v为整型类型；
-   - `$bool(v)` - 格式化v为布尔类型；
-   - `$string(v)` - 格式化v为字符串类型。
+    - `$ts` - 当前时间的Unix时间戳；
+    - `$iso` - 当前时间的ISO格式字符串；
+    - `$int(v)` - 格式化v为整型类型；
+    - `$float(v)` - 格式化v为浮点类型；
+    - `$bool(v)` - 格式化v为布尔类型；
+    - 其他非空值为原样设置。
 - `GetValue`可接收`db.Cond`、`db.And`或`db.Or`类型数据。
 <a name="SKYEm"></a>
 ## 物理删除
