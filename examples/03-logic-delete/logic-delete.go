@@ -61,7 +61,7 @@ func main() {
 	}
 
 	// 删除数据
-	if n, err := db.Model("Member").Find(db.Cond{"FirstName": "Chan"}).DeleteOne(); err != nil {
+	if n, err := db.Model("Member").Find(db.Cond{"FirstName": "Eason"}).DeleteOne(); err != nil {
 		log.Fatalf("删除数据失败：%v\n", err)
 	} else {
 		log.Printf("删除记录条数：%d\n", n)

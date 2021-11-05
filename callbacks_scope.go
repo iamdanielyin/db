@@ -74,10 +74,13 @@ func (s *Scope) AddError(err error) *Scope {
 }
 
 func (s *Scope) buildQueryResult() Result {
-	res := s.Coll.Find(s.Conditions...)
-	if s.Unscoped {
-		res.Unscoped()
+	if !s.Unscoped {
+		rule := LookupLogicDeleteRule(s.Metadata.Name)
+		if rule != nil && rule.GetValue != nil {
+			s.Conditions = append(s.Conditions, rule.GetValue)
+		}
 	}
+	res := s.Coll.Find(s.Conditions...)
 	if len(s.Projection) > 0 {
 		res.Project(s.Projection...)
 	}

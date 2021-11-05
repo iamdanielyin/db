@@ -2,22 +2,10 @@ package db
 
 func registerQueryCallbacks(callbacks *callbacks) *callbacks {
 	processor := callbacks.Query()
-	processor.Register("db:logic_delete", queryLogicDeleteCallback)
 	processor.Register("db:before_query", beforeQueryCallback)
 	processor.Register("db:query", queryCallback)
 	processor.Register("db:after_query", afterQueryCallback)
 	return callbacks
-}
-
-func queryLogicDeleteCallback(s *Scope) {
-	if s.Unscoped {
-		return
-	}
-
-	rule := LookupLogicDeleteRule(s.Metadata.Name)
-	if rule != nil && rule.GetValue != nil {
-		s.And(rule.GetValue)
-	}
 }
 
 func beforeQueryCallback(s *Scope) {
