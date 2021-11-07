@@ -135,7 +135,10 @@ func (r *mongoResult) Unscoped() db.Result {
 func (r *mongoResult) UpdateOne(i interface{}) (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
-	result, err := r.beforeQuery().beforeUpdate(i).mc.coll.UpdateOne(ctx, r.filter, r.updateDoc)
+	result, err := r.beforeQuery().beforeUpdate(i).mc.coll.UpdateOne(ctx,
+		r.filter,
+		r.updateDoc,
+	)
 	if err != nil {
 		return 0, db.Errorf(`%v`, err)
 	}
@@ -145,7 +148,10 @@ func (r *mongoResult) UpdateOne(i interface{}) (int, error) {
 func (r *mongoResult) UpdateMany(i interface{}) (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
-	result, err := r.beforeQuery().beforeUpdate(i).mc.coll.UpdateMany(ctx, r.filter, r.updateDoc)
+	result, err := r.beforeQuery().beforeUpdate(i).mc.coll.UpdateMany(ctx,
+		r.filter,
+		r.updateDoc,
+	)
 	if err != nil {
 		return 0, db.Errorf(`%v`, err)
 	}
@@ -165,7 +171,9 @@ func (r *mongoResult) DeleteOne() (int, error) {
 func (r *mongoResult) DeleteMany() (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
-	result, err := r.beforeQuery().mc.coll.DeleteMany(ctx, r.filter)
+	result, err := r.beforeQuery().mc.coll.DeleteMany(ctx,
+		r.filter,
+	)
 	if err != nil {
 		return 0, db.Errorf(`%v`, err)
 	}

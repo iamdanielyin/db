@@ -57,7 +57,7 @@ func parseCondition(meta db.Metadata, item *db.Condition) *bson.E {
 	case db.OperatorEq:
 		return &bson.E{Key: key, Value: item.Value}
 	case db.OperatorNotEq:
-		return &bson.E{Key: key, Value: bson.E{Key: "$ne", Value: item.Value}}
+		return &bson.E{Key: key, Value: bson.D{{Key: "$ne", Value: item.Value}}}
 	case db.OperatorPrefix:
 		return &bson.E{Key: key, Value: primitive.Regex{Pattern: fmt.Sprintf("^%v", item.Value), Options: "gim"}}
 	case db.OperatorSuffix:
@@ -65,13 +65,13 @@ func parseCondition(meta db.Metadata, item *db.Condition) *bson.E {
 	case db.OperatorContains:
 		return &bson.E{Key: key, Value: primitive.Regex{Pattern: fmt.Sprintf("%v", item.Value), Options: "gim"}}
 	case db.OperatorGt:
-		return &bson.E{Key: key, Value: bson.E{Key: "$gt", Value: item.Value}}
+		return &bson.E{Key: key, Value: bson.D{{Key: "$gt", Value: item.Value}}}
 	case db.OperatorGte:
-		return &bson.E{Key: key, Value: bson.E{Key: "$gte", Value: item.Value}}
+		return &bson.E{Key: key, Value: bson.D{{Key: "$gte", Value: item.Value}}}
 	case db.OperatorLt:
-		return &bson.E{Key: key, Value: bson.E{Key: "$lt", Value: item.Value}}
+		return &bson.E{Key: key, Value: bson.D{{Key: "$lt", Value: item.Value}}}
 	case db.OperatorLte:
-		return &bson.E{Key: key, Value: bson.E{Key: "$lte", Value: item.Value}}
+		return &bson.E{Key: key, Value: bson.D{{Key: "$lte", Value: item.Value}}}
 	case db.OperatorRegExp:
 		var (
 			s       = item.Value.(string)
@@ -87,11 +87,11 @@ func parseCondition(meta db.Metadata, item *db.Condition) *bson.E {
 		return &bson.E{Key: key, Value: primitive.Regex{Pattern: pattern, Options: options}}
 
 	case db.OperatorIn:
-		return &bson.E{Key: key, Value: bson.E{Key: "$in", Value: item.Value}}
+		return &bson.E{Key: key, Value: bson.D{{Key: "$in", Value: item.Value}}}
 	case db.OperatorNotIn:
-		return &bson.E{Key: key, Value: bson.E{Key: "$nin", Value: item.Value}}
+		return &bson.E{Key: key, Value: bson.D{{Key: "$nin", Value: item.Value}}}
 	case db.OperatorExists:
-		return &bson.E{Key: key, Value: bson.E{Key: "$exists", Value: item.Value}}
+		return &bson.E{Key: key, Value: bson.D{{Key: "$exists", Value: item.Value}}}
 	}
 	return nil
 }
