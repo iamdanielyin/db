@@ -22,7 +22,6 @@ type mongoResult struct {
 	pageSize   uint
 	unscoped   bool
 	filter     bson.D
-	updateDoc  interface{}
 }
 
 func (r *mongoResult) And(i ...interface{}) db.Result {
@@ -135,9 +134,10 @@ func (r *mongoResult) Unscoped() db.Result {
 func (r *mongoResult) UpdateOne(i interface{}) (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
-	result, err := r.beforeQuery().beforeUpdate(i).mc.coll.UpdateOne(ctx,
+	doc := r.beforeUpdate(i)
+	result, err := r.beforeQuery().mc.coll.UpdateOne(ctx,
 		r.filter,
-		r.updateDoc,
+		doc,
 	)
 	if err != nil {
 		return 0, db.Errorf(`%v`, err)
@@ -148,9 +148,10 @@ func (r *mongoResult) UpdateOne(i interface{}) (int, error) {
 func (r *mongoResult) UpdateMany(i interface{}) (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
-	result, err := r.beforeQuery().beforeUpdate(i).mc.coll.UpdateMany(ctx,
+	doc := r.beforeUpdate(i)
+	result, err := r.beforeQuery().mc.coll.UpdateMany(ctx,
 		r.filter,
-		r.updateDoc,
+		doc,
 	)
 	if err != nil {
 		return 0, db.Errorf(`%v`, err)
@@ -190,55 +191,11 @@ func (r *mongoResult) beforeQuery() *mongoResult {
 	return r
 }
 
-func (r *mongoResult) beforeUpdate(i interface{}) *mongoResult {
-	switch v := i.(type) {
-	case bson.D:
-		if v[0].Key == "$set" {
-			r.updateDoc = v
-			return r
-		}
-		r.updateDoc = bson.D{bson.E{Key: "$set", Value: v}}
-		return r
-	case *bson.D:
-		if (*v)[0].Key == "$set" {
-			r.updateDoc = *v
-			return r
-		}
-		r.updateDoc = bson.D{bson.E{Key: "$set", Value: v}}
-		return r
-	case bson.M:
-		if _, has := v["$set"]; has {
-			r.updateDoc = v
-			return r
-		}
-		r.updateDoc = bson.D{bson.E{Key: "$set", Value: v}}
-		return r
-	case *bson.M:
-		if _, has := (*v)["$set"]; has {
-			r.updateDoc = v
-			return r
-		}
-		r.updateDoc = bson.D{bson.E{Key: "$set", Value: v}}
-		return r
-	case bson.E:
-		if v.Key == "$set" {
-			r.updateDoc = bson.D{v}
-			return r
-		}
-		r.updateDoc = bson.D{bson.E{Key: "$set", Value: v}}
-		return r
-	case *bson.E:
-		if v.Key == "$set" {
-			r.updateDoc = bson.D{*v}
-			return r
-		}
-		r.updateDoc = bson.D{bson.E{Key: "$set", Value: v}}
-		return r
-	}
+func (r *mongoResult) beforeUpdate(i interface{}) (result interface{}) {
+	meta := r.mc.meta
 	reflectValue := reflect.Indirect(reflect.ValueOf(i))
 	switch reflectValue.Kind() {
 	case reflect.Struct:
-		meta := r.mc.meta
 		s := structs.New(i)
 		var doc bson.D
 		for _, field := range s.Fields() {
@@ -251,21 +208,22 @@ func (r *mongoResult) beforeUpdate(i interface{}) *mongoResult {
 			}
 			doc = append(doc, bson.E{Key: key, Value: field.Value()})
 		}
-		r.updateDoc = bson.D{bson.E{Key: "$set", Value: doc}}
-		return r
+		result = bson.D{bson.E{Key: "$set", Value: doc}}
 	case reflect.Map:
-		for _, item := range reflectValue.MapKeys() {
-			if item.Interface().(string) == "$set" {
-				r.updateDoc = i
-				return r
+		var doc bson.D
+		for _, k := range reflectValue.MapKeys() {
+			key := k.Interface().(string)
+			val := reflectValue.MapIndex(k).Interface()
+			if f, has := meta.FieldByName(key); has {
+				key = f.MustNativeName()
 			}
+			doc = append(doc, bson.E{Key: key, Value: val})
 		}
-		r.updateDoc = bson.D{bson.E{Key: "$set", Value: i}}
-		return r
+		result = bson.D{bson.E{Key: "$set", Value: doc}}
 	default:
-		r.updateDoc = bson.D{bson.E{Key: "$set", Value: i}}
-		return r
+		result = i
 	}
+	return
 }
 
 func (r *mongoResult) buildFindOptions() *options.FindOptions {

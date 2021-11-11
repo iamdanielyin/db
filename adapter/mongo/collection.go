@@ -3,6 +3,8 @@ package mongo
 import (
 	"context"
 	"github.com/yuyitech/db"
+	"github.com/yuyitech/structs"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"reflect"
@@ -29,7 +31,8 @@ func (c *mongoCollection) Session() *db.Connection {
 }
 
 func (c *mongoCollection) InsertOne(v interface{}) (db.InsertOneResult, error) {
-	res, err := c.coll.InsertOne(context.Background(), v)
+	docs := c.beforeInsert(v)
+	res, err := c.coll.InsertOne(context.Background(), docs[0])
 	if err != nil {
 		return nil, err
 	}
@@ -38,21 +41,53 @@ func (c *mongoCollection) InsertOne(v interface{}) (db.InsertOneResult, error) {
 }
 
 func (c *mongoCollection) InsertMany(v interface{}) (db.InsertManyResult, error) {
-	reflectValue := reflect.ValueOf(v)
-	var docs []interface{}
-	switch reflectValue.Kind() {
-	case reflect.Slice, reflect.Array:
-		for i := 0; i < reflectValue.Len(); i++ {
-			doc := reflectValue.Index(i).Interface()
-			docs = append(docs, doc)
-		}
-	}
+	docs := c.beforeInsert(v)
 	res, err := c.coll.InsertMany(context.Background(), docs)
 	if err != nil {
 		return nil, err
 	}
 	result := &insertManyResult{result: res}
 	return result, nil
+}
+
+func (c *mongoCollection) beforeInsert(i interface{}) (docs []interface{}) {
+	reflectValue := reflect.Indirect(reflect.ValueOf(i))
+	meta := c.meta
+	switch reflectValue.Kind() {
+	case reflect.Struct:
+		s := structs.New(i)
+		var doc bson.D
+		for _, field := range s.Fields() {
+			if field.IsZero() {
+				continue
+			}
+			key := field.Name()
+			if f, has := meta.FieldByName(key); has {
+				key = f.MustNativeName()
+			}
+			doc = append(doc, bson.E{Key: key, Value: field.Value()})
+		}
+		docs = []interface{}{doc}
+	case reflect.Map:
+		var doc bson.D
+		for _, k := range reflectValue.MapKeys() {
+			key := k.Interface().(string)
+			val := reflectValue.MapIndex(k).Interface()
+			if f, has := meta.FieldByName(key); has {
+				key = f.MustNativeName()
+			}
+			doc = append(doc, bson.E{Key: key, Value: val})
+		}
+	case reflect.Slice, reflect.Array:
+		for i := 0; i < reflectValue.Len(); i++ {
+			doc := reflectValue.Index(i).Interface()
+			res := c.beforeInsert(doc)
+			docs = append(docs, res[0])
+		}
+	default:
+		docs = append(docs, i)
+	}
+	return
 }
 
 func (c *mongoCollection) Find(i ...interface{}) db.Result {

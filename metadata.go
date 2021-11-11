@@ -1,6 +1,7 @@
 package db
 
 import (
+	"github.com/iancoleman/strcase"
 	"strings"
 	"sync"
 )
@@ -52,7 +53,7 @@ func (m *Metadata) MustNativeName() string {
 	if m.NativeName != "" {
 		return m.NativeName
 	}
-	return m.Name
+	return strcase.ToSnake(m.Name)
 }
 
 func (m *Metadata) FieldByName(name string) (f Field, has bool) {
@@ -85,7 +86,7 @@ func (fields Fields) updateFieldNames() Fields {
 		for k, v := range fields {
 			v.Name = k
 			if v.NativeName == "" {
-				v.NativeName = strings.ToLower(v.Name)
+				v.NativeName = strcase.ToSnake(v.Name)
 			}
 			if len(v.Properties) > 0 {
 				v.Properties = v.Properties.updateFieldNames()
@@ -131,7 +132,7 @@ func (f *Field) MustNativeName() string {
 	if f.NativeName != "" {
 		return f.NativeName
 	}
-	return f.Name
+	return strcase.ToSnake(f.Name)
 }
 
 type Enum []EnumItem
