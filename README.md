@@ -589,22 +589,25 @@ db.Model("User".Find(db.Or(
 ```go
 // 针对所有元数据设置全局规则（全局优先级最低）
 db.RegisterLogicDeleteRule("*", &db.LogicDeleteRule{
-    Field:    "DeletedAt",
-    SetValue: "$now",
+    SetValue: map[string]string{
+        "DeletedAt": "$now",
+    },
     GetValue: db.Cond{"DeletedAt $exists": false},
 })
 
 // 针对某一组元数据设置规则（组规则优于全局规则）
 db.RegisterLogicDeleteRule("Acc*", &db.LogicDeleteRule{
-    Field:    "IsDeleted",
-    SetValue: "$int(1)",
+	SetValue: map[string]string{
+        "IsDeleted": "$int(1)",
+    },
     GetValue: db.Cond{"DeletedAt !=": 1},
 })
 
 // 针对单个元数据设置规则（元数据规则高于组规则）
 db.RegisterLogicDeleteRule("User", &db.LogicDeleteRule{
-    Field:    "DeletedAt",
-    SetValue: "$now",
+	SetValue: map[string]string{
+        "DeletedAt": "$now",
+    },
     GetValue: db.Cond{"DeletedAt $exists": false},
 })
 ```
@@ -613,8 +616,8 @@ db.RegisterLogicDeleteRule("User", &db.LogicDeleteRule{
 - `RegisterLogicDeleteRule`第一个参数为Glob语法（具体用法请参考[https://github.com/gobwas/glob](https://github.com/gobwas/glob)）；
 - 每个元数据只会有**一条**规则生效，规则优先级为`元数据规则 > 组规则 > 全局规则`；
 - `SetValue`的可选值如下：
-    - `$ts` - 当前时间的Unix时间戳；
-    - `$iso` - 当前时间的ISO格式字符串；
+    - `$now` - 当前时间的Unix时间戳；
+    - `$now_iso` - 当前时间的ISO格式字符串；
     - `$int(v)` - 格式化v为整型类型；
     - `$float(v)` - 格式化v为浮点类型；
     - `$bool(v)` - 格式化v为布尔类型；

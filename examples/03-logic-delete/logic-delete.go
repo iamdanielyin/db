@@ -36,8 +36,9 @@ func main() {
 
 	// 注册逻辑删除规则
 	db.RegisterLogicDeleteRule("*", &db.LogicDeleteRule{
-		Field:    "DeletedAt",
-		SetValue: "$ts",
+		SetValue: map[string]string{
+			"DeletedAt": "$now",
+		},
 		GetValue: db.Cond{"DeletedAt $exists": false},
 	})
 

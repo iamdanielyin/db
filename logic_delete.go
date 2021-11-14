@@ -14,46 +14,57 @@ var (
 )
 
 type LogicDeleteRule struct {
-	Pattern   string
-	SetValues map[string]string
-	Field     string
-	SetValue  string
-	GetValue  interface{} // 元素可能为 Cond 或 Union
+	Pattern  string
+	SetValue map[string]string
+	GetValue interface{} // 元素可能为 Cond 或 Union
 }
 
-func (rule *LogicDeleteRule) ParseSetValue() interface{} {
-	if rule.SetValue != "" {
+func (rule *LogicDeleteRule) ParseSetValue() map[string]interface{} {
+	doc := make(map[string]interface{})
+	for k, v := range rule.SetValue {
+		val := rule.parseValue(v)
+		if val != nil {
+			doc[k] = val
+		}
+	}
+	if len(doc) == 0 {
+		return nil
+	}
+	return doc
+}
+
+func (rule *LogicDeleteRule) parseValue(val string) interface{} {
+	if val != "" {
 		var (
-			ss     = len(rule.SetValue)
+			ss     = len(val)
 			vInt   = "$int"
 			vFloat = "$float"
 			vBool  = "$bool"
 		)
-		if rule.SetValue == "$ts" {
+		if val == "$now" {
 			return time.Now().Unix()
-		} else if rule.SetValue == "$iso" {
+		} else if val == "$now_iso" {
 			return time.Now().UTC().Format(time.RFC3339)
-		} else if strings.HasPrefix(rule.SetValue, vInt) {
-			s := rule.SetValue[len(vInt)-1 : ss-1]
+		} else if strings.HasPrefix(val, vInt) {
+			s := val[len(vInt)+1 : ss-1]
 			if v, err := strconv.Atoi(s); err == nil {
 				return v
 			}
-		} else if strings.HasPrefix(rule.SetValue, vFloat) {
-			s := rule.SetValue[len(vFloat)-1 : ss-1]
+		} else if strings.HasPrefix(val, vFloat) {
+			s := val[len(vFloat)+1 : ss-1]
 			if v, err := strconv.Atoi(s); err == nil {
 				return v
 			}
-		} else if strings.HasPrefix(rule.SetValue, vBool) {
-			s := rule.SetValue[len(vBool)-1 : ss-1]
+		} else if strings.HasPrefix(val, vBool) {
+			s := val[len(vBool)+1 : ss-1]
 			if v, err := strconv.ParseBool(s); err == nil {
 				return v
 			}
 		} else {
-			return rule.SetValue
+			return val
 		}
 	}
 	return nil
-
 }
 
 func RegisterLogicDeleteRule(pattern string, rule *LogicDeleteRule) {
