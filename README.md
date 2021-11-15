@@ -770,13 +770,17 @@ db.RegisterMiddleware("User:beforeCreate", func(scope *db.Scope) error {
    - `Metadata` - 当前元数据；
    - `Conditions` - 当前操作关联的所有查询条件；
    - `Action` - 当前数据库操作；
-      - `insert-one`
-      - `insert-many`
-      - `update-one`
-      - `update-many`
-      - `delete-one`
-      - `delete-many`
-      - `find`
+      - `INSERT_ONE`
+      - `INSERT_MANY`
+      - `UPDATE_ONE`
+      - `UPDATE_MANY`
+      - `DELETE_ONE`
+      - `DELETE_MANY`
+      - `QUERY_ONE`
+      - `QUERY_ALL`
+      - `QUERY_CURSOR`
+      - `QUERY_COUNT`
+      - `QUERY_PAGE`
    - `OrderBys` - 排序参数；
    - `PageSize` - 分页条数；
    - `PageNum` - 当前页码；
@@ -817,10 +821,10 @@ db.RegisterMiddleware("User:beforeUpdate:PhoneNumber|EmailAddress", func(scope *
    - 传入多个字段名，以英文逗号`,`分隔：表示仅指定的所有字段均发生变化时触发；
    - 传入多个字段名，以英文竖线`|`分隔：表示指定的所有字段中某一个发生变化时触发。
 - 字段规则在不同CRUD操作时匹配的位置不同：
-   - `insert-one` - 匹配`InsertOneDoc`；
-   - `insert-many` - 匹配`InsertManyDocs`；
-   - `update-xxx` - 匹配`UpdateDoc`；
-   - `delete-xxx` - 匹配`Conditions`。
+   - `INSERT_ONE` - 匹配`InsertOneDoc`；
+   - `INSERT_MANY` - 匹配`InsertManyDocs`；
+   - `UPDATE_XXX` - 匹配`UpdateDoc`；
+   - `DELETE_XXX` - 匹配`Conditions`。
   <a name="htZqq"></a>
 # 元数据关联
 在常见的ORM框架中，我们常常听到以下几种关联关系：
@@ -852,48 +856,53 @@ db.RegisterMiddleware("User:beforeUpdate:PhoneNumber|EmailAddress", func(scope *
 ```go
 // User 用户
 type User struct {
-	ID        string
-	RealName  string
-	IDCard    *IDCard    `db:"hasOne=UserID"`
-	BankCards []BankCard `db:"hasMany=UserID"`
-	CompanyID string
-	Company   *Company  `db:"refOne=CompanyID"`
-	Projects  []Project `db:"refMany=user_project_ref,user_id,project_id"`
+    ID        string
+    RealName  string
+    IDCard    *IDCard    `db:"rel=type:HO,meta:IDCard,src:ID,dst:UserID"`
+    BankCards []BankCard `db:"rel=type:HM,meta:BankCard,src:ID,dst:UserID"`
+    CompanyID string
+    Company   *Company  `db:"rel=type:RO,meta:Company,src:CompanyID,dst:ID"`
+    Projects  []Project `db:"rel=type:RM,meta:Project,src:ID,dst:ID,sub_meta:UserProjectRef,sub_src:UserID,sub_dst:ProjectID"`
 }
 
 // IDCard 身份证
 type IDCard struct {
-	ID      string
-	CardNum string
-	UserID  string
+    ID      string
+    CardNum string
+    UserID  string
 }
 
 // BankCard 银行卡
 type BankCard struct {
-	ID      string
-	CardNum string
-	UserID  string
+    ID      string
+    CardNum string
+    UserID  string
 }
 
 // Company 公司
 type Company struct {
-	ID   string
-	Name string
+    ID   string
+    Name string
 }
 
 // Project 项目组
 type Project struct {
-	ID   string
-	Name string
+    ID   string
+    Name string
 }
 
 // 注册所有元数据
 db.RegisterMetadata("test", &User{}, &IDCard{}, &BankCard{}, &Company{}, &Project{})
 ```
-注意：
+参数`rel`的配置说明如下：
 
-- `hasOne`、`hasMany`、`refOne`值的配置规则为`引用元数据.外键名,当前主键名`，其中`引用元数据`的配置是可选的，默认使用当前字段类型的结构体名称作为引用元数据名称。
-- `refMany`值的配置规则为`中间表名称,中间表中的当前主键字段名:当前主键字段名,中间表中的引用主键字段名:引用元数据.引用主键字段名`，其中`当前主键字段名`和`引用元数据.引用主键字段名`的配置是可选的。
+- `type` - 拥有一个（`HO`）、拥有多个（`HM`）、引用一个（`RO`）、引用多个（`RM`）；
+- `meta` - 被关联的元数据名称；
+- `src` - 关系来源字段名，一般为当前元数据的主键名；
+- `dst` - 关系目标字段名，一般为被关联元数据的主键名；
+- `sub_meta` - 中间模型名称，一般为多对多关系的中间模型名称；
+- `sub_src` - 中间模型中的来源字段映射；
+- `sub_dst` - 中间模型中的目标字段映射。
 <a name="hn3OE"></a>
 ## 引用联查
 引用联查表示的是在查询主表数据时，可以通过一句命令即可快速查询出被关联的数据。
