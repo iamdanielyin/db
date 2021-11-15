@@ -152,8 +152,8 @@ type EnumItem struct {
 	Value string
 }
 
-func RegisterMetadata(sourceName string, metadata interface{}) error {
-	if metadata == nil {
+func RegisterMetadata(sourceName string, metadata ...interface{}) error {
+	if len(metadata) == 0 {
 		return nil
 	}
 
@@ -163,7 +163,7 @@ func RegisterMetadata(sourceName string, metadata interface{}) error {
 	if !HasSession(sourceName) {
 		return Errorf(`unconnected data source "%s"`, sourceName)
 	}
-	return Session(sourceName).RegisterMetadata(metadata)
+	return Session(sourceName).RegisterMetadata(metadata...)
 }
 
 func UnregisterMetadata(name string) {
