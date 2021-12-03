@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -30,6 +31,67 @@ type Condition struct {
 }
 
 type Cond map[string]interface{}
+
+func (c Cond) Op(key, operator string, value interface{}) Cond {
+	key = strings.TrimSpace(key)
+	operator = strings.TrimSpace(operator)
+	if key != "" {
+		c[fmt.Sprintf("%s %s", key, operator)] = value
+	}
+	return c
+}
+
+func (c Cond) Eq(key string, value interface{}) Cond {
+	return c.Op(key, OperatorEq, value)
+}
+
+func (c Cond) NotEq(key string, value interface{}) Cond {
+	return c.Op(key, OperatorNotEq, value)
+}
+
+func (c Cond) Prefix(key string, value interface{}) Cond {
+	return c.Op(key, OperatorPrefix, value)
+}
+
+func (c Cond) Suffix(key string, value interface{}) Cond {
+	return c.Op(key, OperatorSuffix, value)
+}
+
+func (c Cond) Contains(key string, value interface{}) Cond {
+	return c.Op(key, OperatorContains, value)
+}
+
+func (c Cond) Gt(key string, value interface{}) Cond {
+	return c.Op(key, OperatorGt, value)
+}
+
+func (c Cond) Gte(key string, value interface{}) Cond {
+	return c.Op(key, OperatorGte, value)
+}
+
+func (c Cond) Lt(key string, value interface{}) Cond {
+	return c.Op(key, OperatorLt, value)
+}
+
+func (c Cond) Lte(key string, value interface{}) Cond {
+	return c.Op(key, OperatorLte, value)
+}
+
+func (c Cond) RegExp(key string, value interface{}) Cond {
+	return c.Op(key, OperatorRegExp, value)
+}
+
+func (c Cond) In(key string, value interface{}) Cond {
+	return c.Op(key, OperatorIn, value)
+}
+
+func (c Cond) NotIn(key string, value interface{}) Cond {
+	return c.Op(key, OperatorNotIn, value)
+}
+
+func (c Cond) Exists(key string, value interface{}) Cond {
+	return c.Op(key, OperatorExists, value)
+}
 
 func (c Cond) Conditions() (conditions []Condition) {
 	for k, v := range c {

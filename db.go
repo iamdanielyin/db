@@ -25,12 +25,17 @@ func Session(name string) *Connection {
 	return conn
 }
 
+func HasModel(name string) bool {
+	_, err := LookupMetadata(name)
+	return err == nil
+}
+
 func Model(name string) Collection {
 	meta, err := LookupMetadata(name)
 	if err != nil {
 		panic(err)
 	}
-	return meta.Session().client.Model(meta)
+	return meta.Session().Client().Model(meta)
 }
 
 func StartTransaction(name string) (Tx, error) {

@@ -30,7 +30,7 @@ func (c *mongoCollection) Session() *db.Connection {
 	return c.sess
 }
 
-func (c *mongoCollection) InsertOne(v interface{}) (db.InsertOneResult, error) {
+func (c *mongoCollection) InsertOne(v interface{}, opts ...*db.InsertOptions) (db.InsertOneResult, error) {
 	docs := c.beforeInsert(v)
 	res, err := c.coll.InsertOne(context.Background(), docs[0])
 	if err != nil {
@@ -40,7 +40,7 @@ func (c *mongoCollection) InsertOne(v interface{}) (db.InsertOneResult, error) {
 	return result, nil
 }
 
-func (c *mongoCollection) InsertMany(v interface{}) (db.InsertManyResult, error) {
+func (c *mongoCollection) InsertMany(v interface{}, opts ...*db.InsertOptions) (db.InsertManyResult, error) {
 	docs := c.beforeInsert(v)
 	res, err := c.coll.InsertMany(context.Background(), docs)
 	if err != nil {

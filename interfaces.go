@@ -20,8 +20,8 @@ type Collection interface {
 	Name() string
 	Metadata() Metadata
 	Session() *Connection
-	InsertOne(interface{}) (InsertOneResult, error)
-	InsertMany(interface{}) (InsertManyResult, error)
+	InsertOne(interface{}, ...*InsertOptions) (InsertOneResult, error)
+	InsertMany(interface{}, ...*InsertOptions) (InsertManyResult, error)
 	Find(...interface{}) Result
 }
 
@@ -29,18 +29,21 @@ type Result interface {
 	And(...interface{}) Result
 	Or(...interface{}) Result
 	Project(...string) Result
-	QueryResult
+	One(dst interface{}) error
+	All(dst interface{}) error
+	Cursor() (Cursor, error)
 	OrderBy(...string) Result
 	Count() (int, error)
 	Paginate(uint) Result
 	Page(uint) Result
 	TotalRecords() (int, error)
+	Preload(interface{}) Result
 	TotalPages() (int, error)
-	UpdateOne(interface{}) (int, error)
-	UpdateMany(interface{}) (int, error)
+	UpdateOne(interface{}, ...*UpdateOptions) (int, error)
+	UpdateMany(interface{}, ...*UpdateOptions) (int, error)
 	Unscoped() Result
-	DeleteOne() (int, error)
-	DeleteMany() (int, error)
+	DeleteOne(...*DeleteOptions) (int, error)
+	DeleteMany(...*DeleteOptions) (int, error)
 }
 
 type Tx interface {

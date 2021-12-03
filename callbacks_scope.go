@@ -17,6 +17,7 @@ type Scope struct {
 	Session          *Connection
 	Metadata         Metadata
 	Conditions       []interface{}
+	PreloadsOptions  []*PreloadOptions
 	Projection       []string
 	Action           string
 	OrderBys         []string
@@ -25,8 +26,11 @@ type Scope struct {
 	InsertOneDoc     interface{}
 	InsertManyDocs   interface{}
 	UpdateDoc        interface{}
+	UpdateOptions    *UpdateOptions
 	InsertOneResult  InsertOneResult
 	InsertManyResult InsertManyResult
+	InsertOptions    *InsertOptions
+	DeleteOptions    *DeleteOptions
 	RecordsAffected  int
 	TotalRecords     int
 	TotalPages       int

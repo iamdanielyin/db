@@ -93,21 +93,27 @@ func (cc *callbacksCollection) Session() *Connection {
 	return cc.rawColl.Session()
 }
 
-func (cc *callbacksCollection) InsertOne(i interface{}) (InsertOneResult, error) {
+func (cc *callbacksCollection) InsertOne(i interface{}, opts ...*InsertOptions) (InsertOneResult, error) {
 	scope := &Scope{
 		Action:       ActionInsertOne,
 		InsertOneDoc: i,
 		Coll:         cc.rawColl,
 	}
+	if len(opts) > 0 && opts[0] != nil {
+		scope.InsertOptions = opts[0]
+	}
 	cc.callbacks.Create().Execute(cc.NewScope(scope))
 	return scope.InsertOneResult, scope.Error
 }
 
-func (cc *callbacksCollection) InsertMany(i interface{}) (InsertManyResult, error) {
+func (cc *callbacksCollection) InsertMany(i interface{}, opts ...*InsertOptions) (InsertManyResult, error) {
 	scope := &Scope{
 		Action:         ActionInsertMany,
 		InsertManyDocs: i,
 		Coll:           cc.rawColl,
+	}
+	if len(opts) > 0 && opts[0] != nil {
+		scope.InsertOptions = opts[0]
 	}
 	cc.callbacks.Create().Execute(cc.NewScope(scope))
 	return scope.InsertManyResult, scope.Error
@@ -164,6 +170,24 @@ func (cr *callbacksResult) Unscoped() Result {
 	return cr
 }
 
+func (cr *callbacksResult) Preload(i interface{}) Result {
+	var opts *PreloadOptions
+	switch v := i.(type) {
+	case string:
+		opts = &PreloadOptions{
+			Path: v,
+		}
+	case *PreloadOptions:
+		opts = v
+	case PreloadOptions:
+		opts = &v
+	}
+	if opts != nil {
+		cr.scope.PreloadsOptions = append(cr.scope.PreloadsOptions, opts)
+	}
+	return cr
+}
+
 func (cr *callbacksResult) One(dst interface{}) error {
 	cr.scope.Dest = dst
 	cr.scope.Action = ActionQueryOne
@@ -178,10 +202,28 @@ func (cr *callbacksResult) All(dst interface{}) error {
 	return cr.scope.Error
 }
 
+type callbacksCursor struct {
+	cr        *callbacksResult
+	rawCursor Cursor
+}
+
+func (c *callbacksCursor) HasNext() bool {
+	return c.rawCursor.HasNext()
+}
+
+func (c *callbacksCursor) Next(dst interface{}) error {
+	// TODO PreloadRefs
+	return c.rawCursor.Next(dst)
+}
+
+func (c *callbacksCursor) Close() error {
+	return c.rawCursor.Close()
+}
+
 func (cr *callbacksResult) Cursor() (Cursor, error) {
 	cr.scope.Action = ActionQueryCursor
 	cr.cc.callbacks.Query().Execute(cr.cc.NewScope(cr.scope))
-	return cr.scope.Cursor, cr.scope.Error
+	return &callbacksCursor{cr: cr, rawCursor: cr.scope.Cursor}, cr.scope.Error
 }
 
 func (cr *callbacksResult) Count() (int, error) {
@@ -200,28 +242,40 @@ func (cr *callbacksResult) TotalPages() (int, error) {
 	return cr.scope.TotalPages, cr.scope.Error
 }
 
-func (cr *callbacksResult) UpdateOne(i interface{}) (int, error) {
+func (cr *callbacksResult) UpdateOne(i interface{}, opts ...*UpdateOptions) (int, error) {
 	cr.scope.Action = ActionUpdateOne
 	cr.scope.UpdateDoc = i
+	if len(opts) > 0 && opts[0] != nil {
+		cr.scope.UpdateOptions = opts[0]
+	}
 	cr.cc.callbacks.Update().Execute(cr.cc.NewScope(cr.scope))
 	return cr.scope.RecordsAffected, cr.scope.Error
 }
 
-func (cr *callbacksResult) UpdateMany(i interface{}) (int, error) {
+func (cr *callbacksResult) UpdateMany(i interface{}, opts ...*UpdateOptions) (int, error) {
 	cr.scope.Action = ActionUpdateMany
 	cr.scope.UpdateDoc = i
+	if len(opts) > 0 && opts[0] != nil {
+		cr.scope.UpdateOptions = opts[0]
+	}
 	cr.cc.callbacks.Update().Execute(cr.cc.NewScope(cr.scope))
 	return cr.scope.RecordsAffected, cr.scope.Error
 }
 
-func (cr *callbacksResult) DeleteOne() (int, error) {
+func (cr *callbacksResult) DeleteOne(opts ...*DeleteOptions) (int, error) {
 	cr.scope.Action = ActionDeleteOne
+	if len(opts) > 0 && opts[0] != nil {
+		cr.scope.DeleteOptions = opts[0]
+	}
 	cr.cc.callbacks.Delete().Execute(cr.cc.NewScope(cr.scope))
 	return cr.scope.RecordsAffected, cr.scope.Error
 }
 
-func (cr *callbacksResult) DeleteMany() (int, error) {
+func (cr *callbacksResult) DeleteMany(opts ...*DeleteOptions) (int, error) {
 	cr.scope.Action = ActionDeleteMany
+	if len(opts) > 0 && opts[0] != nil {
+		cr.scope.DeleteOptions = opts[0]
+	}
 	cr.cc.callbacks.Delete().Execute(cr.cc.NewScope(cr.scope))
 	return cr.scope.RecordsAffected, cr.scope.Error
 }

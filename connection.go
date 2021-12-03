@@ -27,6 +27,14 @@ func (c *Connection) Client() Client {
 	return c.client
 }
 
+func (c *Connection) Model(name string) Collection {
+	meta, err := LookupMetadata(name)
+	if err != nil {
+		panic(err)
+	}
+	return meta.Session().Client().Model(meta)
+}
+
 func (c *Connection) Disconnect() error {
 	return c.client.Disconnect(context.Background())
 }

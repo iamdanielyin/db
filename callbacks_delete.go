@@ -1,10 +1,5 @@
 package db
 
-import (
-	"github.com/iancoleman/strcase"
-	"strings"
-)
-
 func registerDeleteCallbacks(callbacks *callbacks) *callbacks {
 	processor := callbacks.Delete()
 	processor.Register("db:begin_transaction", beginTransactionCallback)
@@ -29,13 +24,7 @@ func logicDeleteCallback(s *Scope) {
 	if values := rule.ParseSetValue(); values != nil {
 		var doc = make(map[string]interface{})
 		for key, val := range values {
-			if f, has := s.Metadata.FieldByName(key); has {
-				key = f.MustNativeName()
-			} else if strings.HasPrefix(key, "!") {
-				key = key[1:]
-			} else {
-				key = strcase.ToSnake(key)
-			}
+			key = s.Metadata.MustFieldNativeName(key)
 			doc[key] = val
 		}
 		s.UpdateDoc = doc

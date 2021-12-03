@@ -100,6 +100,10 @@ func (r *mongoResult) Count() (int, error) {
 	return int(val), nil
 }
 
+func (r *mongoResult) Preload(i interface{}) db.Result {
+	return r
+}
+
 func (r *mongoResult) Paginate(u uint) db.Result {
 	r.pageSize = u
 	return r
@@ -131,7 +135,7 @@ func (r *mongoResult) Unscoped() db.Result {
 	return r
 }
 
-func (r *mongoResult) UpdateOne(i interface{}) (int, error) {
+func (r *mongoResult) UpdateOne(i interface{}, opts ...*db.UpdateOptions) (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 	doc := r.beforeUpdate(i)
@@ -145,7 +149,7 @@ func (r *mongoResult) UpdateOne(i interface{}) (int, error) {
 	return int(result.MatchedCount), nil
 }
 
-func (r *mongoResult) UpdateMany(i interface{}) (int, error) {
+func (r *mongoResult) UpdateMany(i interface{}, opts ...*db.UpdateOptions) (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 	doc := r.beforeUpdate(i)
@@ -159,7 +163,7 @@ func (r *mongoResult) UpdateMany(i interface{}) (int, error) {
 	return int(result.MatchedCount), nil
 }
 
-func (r *mongoResult) DeleteOne() (int, error) {
+func (r *mongoResult) DeleteOne(opts ...*db.DeleteOptions) (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 	result, err := r.beforeQuery().mc.coll.DeleteOne(ctx, r.filter)
@@ -169,7 +173,7 @@ func (r *mongoResult) DeleteOne() (int, error) {
 	return int(result.DeletedCount), nil
 }
 
-func (r *mongoResult) DeleteMany() (int, error) {
+func (r *mongoResult) DeleteMany(opts ...*db.DeleteOptions) (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 	result, err := r.beforeQuery().mc.coll.DeleteMany(ctx,

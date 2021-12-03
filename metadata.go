@@ -25,6 +25,13 @@ const (
 	//ArrayArray     = "[array]"
 )
 
+const (
+	RelationshipHasOne  = "HAS_ONE"
+	RelationshipHasMany = "HAS_MANY"
+	RelationshipRefOne  = "REFERS_TO_ONE"
+	RelationshipRefMany = "REFERS_TO_MANY"
+)
+
 var (
 	metadataMap   = make(map[string]Metadata)
 	metadataMapMu sync.RWMutex
@@ -64,18 +71,13 @@ func (m *Metadata) FieldByName(name string) (f Field, has bool) {
 	return
 }
 
-func (m *Metadata) callHooks(kind string) {
-	switch kind {
-	case HookBeforeSave:
-	case HookBeforeCreate:
-	case HookAfterCreate:
-	case HookAfterSave:
-	case HookBeforeUpdate:
-	case HookAfterUpdate:
-	case HookBeforeQuery:
-	case HookAfterQuery:
-	case HookBeforeDelete:
-	case HookAfterDelete:
+func (m *Metadata) MustFieldNativeName(name string) string {
+	if f, has := m.FieldByName(name); has {
+		return f.MustNativeName()
+	} else if strings.HasPrefix(name, "!") {
+		return name[1:]
+	} else {
+		return strcase.ToSnake(name)
 	}
 }
 
@@ -126,6 +128,7 @@ type Field struct {
 	Required     string
 	Unique       string
 	DefaultValue string
+	Relationship Relationship
 }
 
 func (f *Field) MustNativeName() string {
@@ -150,6 +153,16 @@ func (e Enum) ItemByValue(value string) (v EnumItem, has bool) {
 type EnumItem struct {
 	Label string
 	Value string
+}
+
+type Relationship struct {
+	Type        string `valid:"required,!empty"`
+	SrcField    string `valid:"required,!empty"`
+	DstField    string `valid:"required,!empty"`
+	Metadata    string `valid:"required,!empty"`
+	IntMeta     string
+	IntSrcField string
+	IntDstField string
 }
 
 func RegisterMetadata(sourceName string, metadata ...interface{}) error {
