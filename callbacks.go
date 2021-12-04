@@ -202,24 +202,6 @@ func (cr *callbacksResult) All(dst interface{}) error {
 	return cr.scope.Error
 }
 
-type callbacksCursor struct {
-	cr        *callbacksResult
-	rawCursor Cursor
-}
-
-func (c *callbacksCursor) HasNext() bool {
-	return c.rawCursor.HasNext()
-}
-
-func (c *callbacksCursor) Next(dst interface{}) error {
-	// TODO PreloadRefs
-	return c.rawCursor.Next(dst)
-}
-
-func (c *callbacksCursor) Close() error {
-	return c.rawCursor.Close()
-}
-
 func (cr *callbacksResult) Cursor() (Cursor, error) {
 	cr.scope.Action = ActionQueryCursor
 	cr.cc.callbacks.Query().Execute(cr.cc.NewScope(cr.scope))
@@ -278,6 +260,24 @@ func (cr *callbacksResult) DeleteMany(opts ...*DeleteOptions) (int, error) {
 	}
 	cr.cc.callbacks.Delete().Execute(cr.cc.NewScope(cr.scope))
 	return cr.scope.RecordsAffected, cr.scope.Error
+}
+
+type callbacksCursor struct {
+	cr        *callbacksResult
+	rawCursor Cursor
+}
+
+func (c *callbacksCursor) HasNext() bool {
+	return c.rawCursor.HasNext()
+}
+
+func (c *callbacksCursor) Next(dst interface{}) error {
+	// TODO PreloadRefs
+	return c.rawCursor.Next(dst)
+}
+
+func (c *callbacksCursor) Close() error {
+	return c.rawCursor.Close()
 }
 
 type processor struct {

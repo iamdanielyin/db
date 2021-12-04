@@ -41,41 +41,41 @@ func queryCallback(s *Scope) {
 }
 
 func preloadCallback(scope *Scope) {
-	if len(scope.PreloadsOptions) == 0 {
+	if len(scope.PreloadsOptions) == 0 || (scope.Action != ActionQueryOne && scope.Action != ActionQueryAll) {
 		return
 	}
 	for _, preloadItem := range scope.PreloadsOptions {
 		preloadFields := strings.Split(strings.TrimSpace(preloadItem.Path), ".")
+		meta := scope.Metadata
 		for _, preloadFieldName := range preloadFields {
-			preloadField, has := scope.Metadata.FieldByName(preloadFieldName)
-			if !has || !preloadField.IsRef {
-				continue
+			f, has := meta.FieldByName(preloadFieldName)
+			if !has {
+				break
 			}
-			rel := preloadField.Relationship
-			switch rel.Type {
-			case RelationshipHasOne:
-			case RelationshipHasMany:
-			case RelationshipRefOne:
-			case RelationshipRefMany:
+			if err := preloadField(scope.Dest, meta, &PreloadOptions{
+				Path:     preloadFieldName,
+				Select:   preloadItem.Select,
+				OrderBys: preloadItem.OrderBys,
+				Page:     preloadItem.Page,
+				Size:     preloadItem.Size,
+			}, scope.Session); err != nil {
+				scope.AddError(err)
+				break
 			}
+			//f.Relationship
+			// TODO 链式下一个
 		}
-
-		dstModel := scope.Session.Model()
-	}
-	switch s.Action {
-	case ActionQueryOne:
-
-	case ActionQueryAll:
-
-	case ActionQueryCursor:
-
 	}
 }
 
 func preloadField(value interface{}, meta Metadata, opts *PreloadOptions, sess *Connection) error {
-	var relationship Relationship
+	// TODO value会是数组
+	if IsNil(value) || sess == nil {
+		return nil
+	}
+	var relationship *Relationship
 	if f, has := meta.FieldByName(opts.Path); has {
-		relationship = f.Relationship
+		relationship = &f.Relationship
 	} else {
 		return Errorf("preload field does not exist: %s", opts.Path)
 	}
@@ -100,7 +100,7 @@ func preloadField(value interface{}, meta Metadata, opts *PreloadOptions, sess *
 			targetField = f
 			targetValue = reflect.New(reflect.PtrTo(f.ReflectField().Type)).Interface()
 		}
-		if err := execPreload(relationship, sess, srcValue, targetValue); err != nil {
+		if err := execPreload(relationship, opts, sess, srcValue, targetValue); err != nil {
 			return err
 		}
 		if targetField.Kind() == reflect.Ptr {
@@ -120,7 +120,7 @@ func preloadField(value interface{}, meta Metadata, opts *PreloadOptions, sess *
 		}
 		if srcValue != nil {
 			var targetValue interface{}
-			if err := execPreload(relationship, sess, srcValue, targetValue); err != nil {
+			if err := execPreload(relationship, opts, sess, srcValue, targetValue); err != nil {
 				return err
 			}
 			for _, k := range indirectValue.MapKeys() {
@@ -136,23 +136,39 @@ func preloadField(value interface{}, meta Metadata, opts *PreloadOptions, sess *
 	return nil
 }
 
-func execPreload(relationship Relationship, sess *Connection, srcValue interface{}, targetValue interface{}) error {
+func execPreload(relationship *Relationship, opts *PreloadOptions, sess *Connection, srcValue interface{}, targetValue interface{}) error {
 	if _, err := LookupMetadata(relationship.Metadata); err != nil {
 		return err
 	}
 	refModel := sess.Model(relationship.Metadata)
 
 	switch relationship.Type {
-	case RelationshipHasOne, RelationshipRefOne:
-		if err := refModel.Find(Cond{
+	case RelationshipHasOne, RelationshipRefOne, RelationshipHasMany:
+		res := refModel.Find(Cond{
 			relationship.DstField: srcValue,
-		}).One(targetValue); err != nil {
-			return err
+		})
+		if !IsNil(opts.Match) {
+			res.And(opts.Match)
 		}
-	case RelationshipHasMany:
-		if err := refModel.Find(Cond{
-			relationship.DstField: srcValue,
-		}).All(targetValue); err != nil {
+		if len(opts.Select) > 0 {
+			res.Project(opts.Select...)
+		}
+		if len(opts.OrderBys) > 0 {
+			res.OrderBy(opts.OrderBys...)
+		}
+		if opts.Size > 0 {
+			res.Paginate(opts.Size)
+		}
+		if opts.Page > 0 {
+			res.Page(opts.Page)
+		}
+		var err error
+		if relationship.Type == RelationshipHasMany {
+			err = res.All(targetValue)
+		} else {
+			err = res.One(targetValue)
+		}
+		if err != nil {
 			return err
 		}
 	case RelationshipRefMany:
