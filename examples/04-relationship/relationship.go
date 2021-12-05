@@ -22,6 +22,7 @@ type IDCard struct {
 	ID      string
 	CardNum string
 	UserID  string
+	User    *User `db:"ref=type:RO,meta:User,src:UserID,dst:ID"`
 }
 
 // BankCard 银行卡

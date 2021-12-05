@@ -33,7 +33,7 @@ func HasModel(name string) bool {
 func Model(name string) Collection {
 	meta, err := LookupMetadata(name)
 	if err != nil {
-		panic(err)
+		meta = Metadata{Name: name}
 	}
 	return meta.Session().Client().Model(meta)
 }

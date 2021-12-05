@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -183,7 +184,9 @@ func (cr *callbacksResult) Preload(i interface{}) Result {
 		opts = &v
 	}
 	if opts != nil {
-		cr.scope.PreloadsOptions = append(cr.scope.PreloadsOptions, opts)
+		if opts.Path = strings.TrimSpace(opts.Path); opts.Path != "" {
+			cr.scope.PreloadsOptions = append(cr.scope.PreloadsOptions, opts)
+		}
 	}
 	return cr
 }

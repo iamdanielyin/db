@@ -45,32 +45,46 @@ func preloadCallback(scope *Scope) {
 		return
 	}
 	for _, preloadItem := range scope.PreloadsOptions {
-		preloadFields := strings.Split(strings.TrimSpace(preloadItem.Path), ".")
-		meta := scope.Metadata
+		preloadFields := strings.Split(preloadItem.Path, ".")
+		meta := &scope.Metadata
 		for _, preloadFieldName := range preloadFields {
-			f, has := meta.FieldByName(preloadFieldName)
+			if meta == nil {
+				break
+			}
+			field, has := meta.FieldByName(preloadFieldName)
 			if !has {
 				break
 			}
-			if err := preloadField(scope.Dest, meta, &PreloadOptions{
-				Path:     preloadFieldName,
-				Select:   preloadItem.Select,
-				OrderBys: preloadItem.OrderBys,
-				Page:     preloadItem.Page,
-				Size:     preloadItem.Size,
-			}, scope.Session); err != nil {
+			var opts *PreloadOptions
+			if len(preloadFields) > 1 {
+				opts = &PreloadOptions{
+					Path: preloadFieldName,
+				}
+			} else {
+				opts = &PreloadOptions{
+					Path:     preloadFieldName,
+					Select:   preloadItem.Select,
+					OrderBys: preloadItem.OrderBys,
+					Page:     preloadItem.Page,
+					Size:     preloadItem.Size,
+				}
+			}
+			if err := preloadField(scope.Dest, meta, opts, scope.Session); err != nil {
 				scope.AddError(err)
 				break
 			}
-			//f.Relationship
-			// TODO 链式下一个
+			if v, err := LookupMetadata(field.Relationship.Metadata); err != nil {
+				scope.AddError(err)
+				break
+			} else {
+				meta = &v
+			}
 		}
 	}
 }
 
-func preloadField(value interface{}, meta Metadata, opts *PreloadOptions, sess *Connection) error {
-	// TODO value会是数组
-	if IsNil(value) || sess == nil {
+func preloadField(value interface{}, meta *Metadata, opts *PreloadOptions, sess *Connection) error {
+	if IsNil(value) || meta == nil || opts == nil || sess == nil {
 		return nil
 	}
 	var relationship *Relationship
@@ -131,37 +145,19 @@ func preloadField(value interface{}, meta Metadata, opts *PreloadOptions, sess *
 				}
 			}
 		}
-
+	case reflect.Array, reflect.Slice:
+		// TODO 联查字段为数组时
 	}
 	return nil
 }
 
 func execPreload(relationship *Relationship, opts *PreloadOptions, sess *Connection, srcValue interface{}, targetValue interface{}) error {
-	if _, err := LookupMetadata(relationship.Metadata); err != nil {
-		return err
-	}
 	refModel := sess.Model(relationship.Metadata)
-
 	switch relationship.Type {
 	case RelationshipHasOne, RelationshipRefOne, RelationshipHasMany:
-		res := refModel.Find(Cond{
+		res := opts.SetResult(refModel.Find(Cond{
 			relationship.DstField: srcValue,
-		})
-		if !IsNil(opts.Match) {
-			res.And(opts.Match)
-		}
-		if len(opts.Select) > 0 {
-			res.Project(opts.Select...)
-		}
-		if len(opts.OrderBys) > 0 {
-			res.OrderBy(opts.OrderBys...)
-		}
-		if opts.Size > 0 {
-			res.Paginate(opts.Size)
-		}
-		if opts.Page > 0 {
-			res.Page(opts.Page)
-		}
+		}))
 		var err error
 		if relationship.Type == RelationshipHasMany {
 			err = res.All(targetValue)
@@ -193,7 +189,8 @@ func execPreload(relationship *Relationship, opts *PreloadOptions, sess *Connect
 			}
 		}
 		if len(dstIDs) > 0 {
-			if err := refModel.Find(Cond{}.In(relationship.DstField, dstIDs)).All(targetValue); err != nil {
+			res := opts.SetResult(refModel.Find(Cond{}.In(relationship.DstField, dstIDs)))
+			if err := res.All(targetValue); err != nil {
 				return err
 			}
 		}
