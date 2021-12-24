@@ -147,6 +147,7 @@ func preloadField(value interface{}, meta *Metadata, opts *PreloadOptions, sess 
 		}
 	case reflect.Array, reflect.Slice:
 		// TODO 联查字段为数组时
+		// 内存组装 or [联表查询]？
 	}
 	return nil
 }

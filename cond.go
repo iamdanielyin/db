@@ -23,14 +23,18 @@ const (
 	OperatorOr       = "$or"
 )
 
-type Condition struct {
+type ConditionEntry struct {
 	Key      string
 	Operator string
 	Value    interface{}
-	Children []Condition
+	Children []ConditionEntry
 }
 
 type Cond map[string]interface{}
+
+func NewCond() Cond {
+	return Cond{}
+}
 
 func (c Cond) Op(key, operator string, value interface{}) Cond {
 	key = strings.TrimSpace(key)
@@ -93,7 +97,7 @@ func (c Cond) Exists(key string, value interface{}) Cond {
 	return c.Op(key, OperatorExists, value)
 }
 
-func (c Cond) Conditions() (conditions []Condition) {
+func (c Cond) Entries() (entries []ConditionEntry) {
 	for k, v := range c {
 		s := strings.Split(k, " ")
 		var (
@@ -108,7 +112,7 @@ func (c Cond) Conditions() (conditions []Condition) {
 		} else {
 			op = OperatorEq
 		}
-		conditions = append(conditions, Condition{
+		entries = append(entries, ConditionEntry{
 			Key:      key,
 			Operator: op,
 			Value:    v,

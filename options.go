@@ -1,18 +1,29 @@
 package db
 
+const (
+	AssociationActionReplace = "REPLACE"
+	AssociationActionMerge   = "MERGE"
+	AssociationActionRemove  = "REMOVE"
+)
+
+type AssociationOption struct {
+	Field         string
+	Action        string
+	AutoUpdate    bool
+	AutoCreate    bool
+	AutoRemove    bool
+	DeleteObjects bool
+}
+
 type InsertOptions struct {
-	UpsertAssocsOnly   bool
-	UpsertAssocsFields []string
 }
 
 type UpdateOptions struct {
-	UpsertAssocsOnly   bool
-	UpsertAssocsFields []string
+	AssocOptions []*AssociationOption
 }
 
 type DeleteOptions struct {
-	RemoveAssocsOnly   bool
-	RemoveAssocsFields []string
+	AssocOptions []*AssociationOption
 }
 
 type PreloadOptions struct {

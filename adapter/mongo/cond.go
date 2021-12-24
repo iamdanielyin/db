@@ -10,7 +10,7 @@ import (
 
 func QueryFilter(meta db.Metadata, filters ...interface{}) (d bson.D) {
 	execCond := func(v *db.Cond) {
-		for _, item := range v.Conditions() {
+		for _, item := range v.Entries() {
 			condition := parseCondition(meta, &item)
 			if condition != nil {
 				d = append(d, *condition)
@@ -46,7 +46,7 @@ func QueryFilter(meta db.Metadata, filters ...interface{}) (d bson.D) {
 	return
 }
 
-func parseCondition(meta db.Metadata, item *db.Condition) *bson.E {
+func parseCondition(meta db.Metadata, item *db.ConditionEntry) *bson.E {
 	key := item.Key
 
 	if f, has := meta.FieldByName(item.Key); has {
