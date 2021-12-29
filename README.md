@@ -38,14 +38,13 @@
 - [中间件](#PRphn)
    - [CRUD中间件](#L8OPY)
    - [字段中间件](#iEvuC)
-- [元数据关联](#htZqq)
+- [元数据引用](#htZqq)
    - [关系定义](#inKDt)
    - [元数据定义](#edQl8)
-   - [引用联查](#hn3OE)
-   - [引用修改](#B0tvR)
-      - [引用新增](#QVMkd)
-      - [引用修改](#xx3Gi)
-      - [引用删除](#QCOMf)
+   - [拥有一个](#hn3OE)
+   - [拥有多个](#B0tvR)
+   - [关联一个](#QVMkd)
+   - [关联多个](#xx3Gi)
 <a name="ZH38i"></a>
 # 快速开始
 ```go
@@ -90,7 +89,7 @@ func main() {
 			LastName:  "Jobs",
 		},
 	})
-	fmt.Println(res.StringIDs())
+    fmt.Println(res.StringIDs())
 
 	// 查询数据
 	var member Member
@@ -616,12 +615,12 @@ db.RegisterLogicDeleteRule("User", &db.LogicDeleteRule{
 - `RegisterLogicDeleteRule`第一个参数为Glob语法（具体用法请参考[https://github.com/gobwas/glob](https://github.com/gobwas/glob)）；
 - 每个元数据只会有**一条**规则生效，规则优先级为`元数据规则 > 组规则 > 全局规则`；
 - `SetValue`的可选值如下：
-    - `$now` - 当前时间的Unix时间戳；
-    - `$now_iso` - 当前时间的ISO格式字符串；
-    - `$int(v)` - 格式化v为整型类型；
-    - `$float(v)` - 格式化v为浮点类型；
-    - `$bool(v)` - 格式化v为布尔类型；
-    - 其他非空值为原样设置。
+   - `$now` - 当前时间的Unix时间戳；
+   - `$now_iso` - 当前时间的ISO格式字符串；
+   - `$int(v)` - 格式化v为整型类型；
+   - `$float(v)` - 格式化v为浮点类型；
+   - `$bool(v)` - 格式化v为布尔类型；
+   - 其他非空值为原样设置。
 - `GetValue`可接收`db.Cond`、`db.And`或`db.Or`类型数据。
 <a name="SKYEm"></a>
 ## 物理删除
@@ -742,8 +741,6 @@ n, _ := db.Session("test").Raw(...).Exec()
 - `beforeDelete` - 删除前调用
 - `afterDelete` - 删除后调用
 
-​
-
 注册语法如下：
 ```go
 // 针对所有元数据注册全局中间件（全局）
@@ -837,160 +834,91 @@ db.RegisterMiddleware("User:beforeUpdate:PhoneNumber|EmailAddress", func(scope *
 这几种关联关系对于新手来说往往难以理解，建模时经常会不知所措。但不论判断哪种关联关系，一定要先确定参照物，就像你和你爸的关系，站在你爸的角度，他叫你儿子，站在你的角度，你叫他爸爸，不同的角度下的叫法也是不同的。
 <a name="inKDt"></a>
 ## 关系定义
-为方便理解，我们针对以上概念稍加转换，分理出以下四种关联关系（其本质上是一样的）：
 
-- **拥有一个**（Has One）：你拥有一样东西，且那样东西只属于你，同时你对它拥有修改权（一对一）；
-- **拥有多个**（Has Many）：你拥有多样东西，且每样东西只属于你，同时你对它们都拥有修改权（站在你的角度是一对多，站在对方角度是多对一）；
-- **引用一个**（Reference One）：你关联一样东西，但这样东西并不只属于你，其他人也可以关联，你对它没有修改权（站在你的角度是多对一，站在对方角度是一对多）；
-- **引用多个**（Reference Many）：你关联多样东西，且这些东西都并不只属于你，其他人也可以关联，你对它们都没有修改权（多对多）。
+1. **拥有一个**（Has One）：用户拥有一张身份证，每个用户对自己的身份证信息拥有**读写权**（一对一）；
+1. **拥有多个**（Has Many）：用户拥有多张银行卡，每个用户对自己的银行卡信息拥有**读写权**（一对多）；
+1. **关联一个**（Associate One）：用户属于一个公司，每个用户对自己所属的公司拥有**只读权**，即每个用户不能修改公司资料（一对一）；
+1. **关联多个**（Associate Many）：用户参与多个项目，每个用户对自己参与的项目拥有**只读权**（多对多）。
 
-上面提到的**修改权**的概念，简单记住就好，后面会详细描述它的作用。
+综上：
+
+- **拥有关系**中，**主模型**对**子模型**拥有完整**读写权**，即我们可以在操作主模型的同时对其子模型进行增删改查。
+- **关联关系**中，**主模型**对**被关联模型**仅拥有**只读权**，即我们只能联查被关联模型、与其建立关联关系以及解除关联关系。
 <a name="edQl8"></a>
 ## 元数据定义
-接着我们创建几个元数据来描述以上四种关系：
+我们通过ref属性来定义以上四种关联关系，参数如下：
 
-- 一个用户只能有一张身份证；
-- 但可以有多张银行卡；
-- 同一时间只能属于一家公司；
-- 但可以属于多个项目组。
+- `type` - 关系类型（必填）；
+   - `HAS_ONE` - 拥有一个
+   - `HAS_MANY` - 拥有多个
+   - `ASSC_ONE` - 关联一个
+   - `ASSC_MANY` - 关联多个
+- `meta` - 被引用元数据名称（可选，默认解析结构体名称）；
+- `src` - 当前元数据中的关系字段名称（可选，默认为主键名称）；
+- `dst` - 被引用元数据中的关系字段名称（可选，默认为主键名称）；
+- `int_meta` - 类似多对多种的中间表，指定元数据名称（当`type=ASSC_MANY`时必填）
+- `int_meta_src` - 中间表中当前元数据中的关系字段名称（当`type=ASSC_MANY`时必填）
+- `int_meta_dst` - 中间表中被引用元数据中的关系字段名称（当`type=ASSC_MANY`时必填）
+
+以下是配置示例：
 ```go
 // User 用户
 type User struct {
-    ID        string
-    RealName  string
-    IDCard    *IDCard    `db:"rel=type:HO,meta:IDCard,src:ID,dst:UserID"`
-    BankCards []BankCard `db:"rel=type:HM,meta:BankCard,src:ID,dst:UserID"`
-    CompanyID string
-    Company   *Company  `db:"rel=type:RO,meta:Company,src:CompanyID,dst:ID"`
-    Projects  []Project `db:"rel=type:RM,meta:Project,src:ID,dst:ID,sub_meta:UserProjectRef,sub_src:UserID,sub_dst:ProjectID"`
+	ID        string
+	RealName  string
+	IDCard    *IDCard    `db:"ref=type:HAS_ONE,dst:UserID"`
+	BankCards []BankCard `db:"ref=type:HAS_MANY,dst:UserID"`
+	CompanyID string
+	Company   *Company  `db:"ref=type:ASSC_ONE,src:CompanyID"`
+	Projects  []Project `db:"ref=type:ASSC_MANY,int_meta:UserProjectRef,int_src:UserID,int_dst:ProjectID"`
 }
 
 // IDCard 身份证
 type IDCard struct {
-    ID      string
-    CardNum string
-    UserID  string
+	ID      string
+	CardNum string
+	UserID  string
+	User    *User `db:"ref=type:ASSC_ONE,src:UserID"`
 }
 
 // BankCard 银行卡
 type BankCard struct {
-    ID      string
-    CardNum string
-    UserID  string
+	ID      string
+	CardNum string
+	UserID  string
 }
 
 // Company 公司
 type Company struct {
-    ID   string
-    Name string
+	ID   string
+	Name string
 }
 
-// Project 项目组
+// Project 项目
 type Project struct {
-    ID   string
-    Name string
+	ID   string
+	Name string
 }
 
-// 注册所有元数据
-db.RegisterMetadata("test", &User{}, &IDCard{}, &BankCard{}, &Company{}, &Project{})
+// UserProjectRef 用户项目关联
+type UserProjectRef struct {
+	UserID    string
+	ProjectID string
+}
 ```
-参数`rel`的配置说明如下：
 
-- `type` - 拥有一个（`HO`）、拥有多个（`HM`）、引用一个（`RO`）、引用多个（`RM`）；
-- `meta` - 被关联的元数据名称；
-- `src` - 关系来源字段名，一般为当前元数据的主键名；
-- `dst` - 关系目标字段名，一般为被关联元数据的主键名；
-- `sub_meta` - 中间模型名称，一般为多对多关系的中间模型名称；
-- `sub_src` - 中间模型中的来源字段映射；
-- `sub_dst` - 中间模型中的目标字段映射。
 <a name="hn3OE"></a>
-## 引用联查
-引用联查表示的是在查询主表数据时，可以通过一句命令即可快速查询出被关联的数据。
-```go
-db.Model("User").Find().Populate("IDCard").All()
-db.Model("User").Find().Populate("BankCards").All()
-db.Model("User").Find().Populate("Company,Projects").All()
-db.Model("User").Find().Populate("Company").Populate("Projects").All()
-```
+## 拥有一个
+
+
 <a name="B0tvR"></a>
-## 引用修改
-引用修改指的是在对主表数据进行**增删改**时，也可以同时对引用档案进行**增删改**。<br />上述提到的**修改权**在这里就体现出来了：框架底层约定，只有当你**拥有**某样东西时才对引用数据具备修改权，也就是引用修改仅限于`hasOne`和`hasMany`。
+## 拥有多个
+
+
 <a name="QVMkd"></a>
-### 引用新增
-当传入的引用档案无主键时，将自动新增引用档案并维护引用关系：
-```go
-db.Model("User").InsertOne(&User{
-    RealName: "Eason Chan",
-    IDCard: &IDCard{
-        CardNum: "440783197410208373",
-    },
-})
-```
-以上代码将在同一事务中依次执行以下操作：
+## 关联一个
 
-1. 新增`User`记录；
-1. 自动设置`IDCard`中的`UserID`；
-1. 新增`IDCard`记录。
 
-​
-
-如果只传入的引用档案的主键，则只会维护引用关系：
-```go
-db.Model("User").InsertOne(&User{
-    RealName: "Eason Chan",
-    IDCard: &IDCard{
-        ID: "1",
-    },
-})
-```
-以上代码将在同一事务中依次执行以下操作：
-
-1. 新增`User`记录；
-1. 自动更新`IDCard`中的`UserID`。
 <a name="xx3Gi"></a>
-### 引用修改
-当传入的引用档案除主键外，还指定了别的值，则会自动更新引用档案并维护引用关系：
-```go
-db.Model("User").InsertOne(&User{
-    RealName: "Eason Chan",
-    IDCard: &IDCard{
-        ID:      "1",
-        CardNum: "440783197410208373",
-    },
-})
-```
-以上代码将在同一事务中依次执行以下操作：
+## 关联多个
 
-1. 新增`User`记录；
-1. 自动更新`IDCard`中的`UserID`和`CardNum`。
-
-​
-
-如果需要**删除引用关系**，则需要使用特殊符号`$rm`：
-```go
-db.Model("User").Find(db.Cond{"ID": "100"}).UpdateOne(&User{
-    RealName: "Daniel Wu",
-    IDCard: &IDCard{
-        ID: "$rm(1)",
-    },
-})
-```
-以上代码将在同一事务中依次执行以下操作：
-
-1. 修改`User`中`ID`为“100”的`RealName`值为“Daniel Wu”；
-1. 更新`IDCard`中`ID`为“1”且`UserID`为“100”字段的值为空。
-<a name="QCOMf"></a>
-### 引用删除
-如果需要删除**引用档案**，则需要使用特殊符号`$del`：
-```go
-db.Model("User").Find(db.Cond{"ID": "100"}).UpdateOne(&User{
-    RealName: "Daniel Wu",
-    IDCard: &IDCard{
-        ID: "$del(1)",
-    },
-})
-```
-以上代码将在同一事务中依次执行以下操作：
-
-1. 修改`User`的`RealName`值为“Daniel Wu”；
-1. 删除`IDCard`中`UserID`为“100”且`ID`为“1”的**档案数据**。
