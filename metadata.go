@@ -7,29 +7,19 @@ import (
 )
 
 const (
-	String    = "string"
-	Password  = "password"
-	Int       = "int"
-	Float     = "float"
-	Bool      = "bool"
-	Timestamp = "timestamp"
-	Time      = "time"
-	Object    = "object"
-	Array     = "array"
-	//ArrayString    = "[string]"
-	//ArrayInt       = "[int]"
-	//ArrayFloat     = "[float]"
-	//ArrayBool      = "[bool]"
-	//ArrayTimestamp = "[timestamp]"
-	//ArrayObject    = "[object]"
-	//ArrayArray     = "[array]"
+	String   = "string"
+	Int      = "int"
+	Float    = "float"
+	Bool     = "bool"
+	Datetime = "datetime"
+	Object   = "object"
+	Array    = "array"
 )
 
 const (
-	RelationshipHasOne  = "HAS_ONE"
-	RelationshipHasMany = "HAS_MANY"
-	RelationshipRefOne  = "REFERS_TO_ONE"
-	RelationshipRefMany = "REFERS_TO_MANY"
+	FormatPassword      = "password"
+	FormatISO           = "iso"
+	FormatUnixTimestamp = "unix_timestamp"
 )
 
 var (
@@ -128,6 +118,7 @@ type Field struct {
 	Required     string
 	Unique       string
 	DefaultValue string
+	Format       string
 	Relationship Relationship
 }
 
@@ -153,16 +144,6 @@ func (e Enum) ItemByValue(value string) (v EnumItem, has bool) {
 type EnumItem struct {
 	Label string
 	Value string
-}
-
-type Relationship struct {
-	Type        string `valid:"required,!empty"`
-	SrcField    string `valid:"required,!empty"`
-	DstField    string `valid:"required,!empty"`
-	Metadata    string `valid:"required,!empty"`
-	IntMeta     string
-	IntSrcField string
-	IntDstField string
 }
 
 func RegisterMetadata(sourceName string, metadata ...interface{}) error {

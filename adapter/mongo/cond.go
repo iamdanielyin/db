@@ -19,13 +19,13 @@ func QueryFilter(meta db.Metadata, filters ...interface{}) (d bson.D) {
 	}
 	execUnion := func(v *db.Union) {
 		var arr bson.A
-		for _, each := range v.Filters {
+		for _, each := range v.Conditions() {
 			eachD := QueryFilter(meta, each)
 			if len(eachD) > 0 {
 				arr = append(arr, eachD)
 			}
 		}
-		if v.Operator == db.OperatorOr {
+		if v.Operator() == db.OperatorOr {
 			d = append(d, bson.E{Key: "$or", Value: arr})
 		} else {
 			d = append(d, bson.E{Key: "$and", Value: arr})

@@ -7,7 +7,9 @@ import (
 	"github.com/imdario/mergo"
 	"github.com/yuyitech/structs"
 	"gopkg.in/guregu/null.v4"
+	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -21,10 +23,19 @@ var (
 type Connection struct {
 	client     Client
 	cacheStore *sync.Map
+	logger     Logger
+}
+
+type ConnectOptions struct {
+	Logger Logger
 }
 
 func (c *Connection) Client() Client {
 	return c.client
+}
+
+func (c *Connection) Logger() Logger {
+	return c.logger
 }
 
 func (c *Connection) Model(name string) Collection {
@@ -47,7 +58,7 @@ func (c *Connection) WithTransaction(fn func(Tx) error) error {
 	return c.client.WithTransaction(fn)
 }
 
-func Connect(source DataSource) (*Connection, error) {
+func Connect(source DataSource, opts ...*ConnectOptions) (*Connection, error) {
 	connMapMu.Lock()
 	defer connMapMu.Unlock()
 
@@ -55,6 +66,16 @@ func Connect(source DataSource) (*Connection, error) {
 		return nil, Errorf(err.Error())
 	}
 
+	var options *ConnectOptions
+	if len(opts) > 0 && opts[0] != nil {
+		options = opts[0]
+	} else {
+		options = new(ConnectOptions)
+	}
+	if options.Logger == nil {
+		json, _ := strconv.ParseBool(os.Getenv("DB_LOGGER_JSON"))
+		options.Logger = NewLogger(json)
+	}
 	adapterMapMu.RLock()
 	adapter := adapterMap[source.Adapter]
 	adapterMapMu.RUnlock()
@@ -67,17 +88,17 @@ func Connect(source DataSource) (*Connection, error) {
 		return nil, Errorf(`data source name already exists "%s"`, source.Name)
 	}
 
-	client, err := adapter.Connect(context.Background(), source)
+	client, err := adapter.Connect(context.Background(), source, options.Logger)
 	if err != nil {
 		return nil, err
 	}
 	conn := &Connection{cacheStore: &sync.Map{}}
-	callbacks := callbackClientWrapper(client, conn)
-	registerCreateCallbacks(callbacks)
-	registerQueryCallbacks(callbacks)
-	registerUpdateCallbacks(callbacks)
-	registerDeleteCallbacks(callbacks)
-	conn.client = callbacks
+	wrapperClient := newClientWrapper(client, conn)
+	registerCreateCallbacks(wrapperClient)
+	registerQueryCallbacks(wrapperClient)
+	registerUpdateCallbacks(wrapperClient)
+	registerDeleteCallbacks(wrapperClient)
+	conn.client = wrapperClient
 	connMap[source.Name] = conn
 	return conn, nil
 }
@@ -227,7 +248,7 @@ func parseStructMetadata(v interface{}) (*Metadata, error) {
 					case string, *string, sql.NullString, *sql.NullString, null.String, *null.String:
 						field.Type = String
 					case time.Time, *time.Time, sql.NullTime, *sql.NullTime, null.Time, *null.Time:
-						field.Type = Time
+						field.Type = Datetime
 					}
 				}
 			}

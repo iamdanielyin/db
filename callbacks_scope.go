@@ -6,7 +6,7 @@ import (
 )
 
 type Scope struct {
-	callbacks  *callbacks
+	callbacks  *clientWrapper
 	cacheStore *sync.Map
 	skipLeft   bool
 
@@ -16,7 +16,7 @@ type Scope struct {
 	Error            error
 	Session          *Connection
 	Metadata         Metadata
-	Conditions       []interface{}
+	Conditions       []Conditional
 	PreloadsOptions  []*PreloadOptions
 	Projection       []string
 	Action           string
@@ -42,19 +42,31 @@ func (s *Scope) Skip() {
 	s.skipLeft = true
 }
 
-func (s *Scope) And(i ...interface{}) {
-	s.Conditions = append(s.Conditions, And(i...))
+func (s *Scope) AddCondition(v ...Conditional) *Scope {
+	if len(v) == 0 {
+		return s
+	}
+	for _, item := range v {
+		if item != nil && len(item.Conditions()) > 0 {
+			s.Conditions = append(s.Conditions)
+		}
+	}
+	return s
 }
 
-func (s *Scope) Or(i ...interface{}) {
-	s.Conditions = append(s.Conditions, Or(i...))
+func (s *Scope) And(i ...Conditional) *Scope {
+	return s.AddCondition(And(i...))
+}
+
+func (s *Scope) Or(i ...Conditional) *Scope {
+	return s.AddCondition(Or(i...))
 }
 
 func (s *Scope) HasError() bool {
 	return s.Error != nil
 }
 
-func (s *Scope) Callback() *callbacks {
+func (s *Scope) Callbacks() *clientWrapper {
 	return s.callbacks
 }
 
@@ -81,10 +93,16 @@ func (s *Scope) buildQueryResult() Result {
 	if !s.Unscoped {
 		rule := LookupLogicDeleteRule(s.Metadata.Name)
 		if rule != nil && rule.GetValue != nil {
-			s.Conditions = append(s.Conditions, rule.GetValue)
+			s.AddCondition(rule.GetValue)
 		}
 	}
-	res := s.Coll.Find(s.Conditions...)
+	var findArgs []interface{}
+	if len(s.Conditions) > 0 {
+		for _, item := range s.Conditions {
+			findArgs = append(findArgs, item)
+		}
+	}
+	res := s.Coll.Find(findArgs...)
 	if len(s.Projection) > 0 {
 		res.Project(s.Projection...)
 	}
@@ -115,21 +133,22 @@ func (s *Scope) callHooks(kind, name string) {
 
 	for _, hook := range hooks {
 		if len(hook.Fields) > 0 {
-			var result bool
+			var ret bool
 			switch s.Action {
 			case ActionInsertOne:
-				result = filterFields(hook, s.Action, s.InsertOneDoc)
+				ret = testFieldsHook(hook, s.Action, s.InsertOneDoc)
 			case ActionInsertMany:
-				result = filterFields(hook, s.Action, s.InsertManyDocs)
+				ret = testFieldsHook(hook, s.Action, s.InsertManyDocs)
 			case ActionUpdateOne, ActionUpdateMany:
-				result = filterFields(hook, s.Action, s.UpdateDoc)
+				ret = testFieldsHook(hook, s.Action, s.UpdateDoc)
 			case ActionDeleteOne, ActionDeleteMany:
-				result = filterFields(hook, s.Action, s.Conditions)
+				ret = testFieldsHook(hook, s.Action, s.Conditions)
 			}
-			if !result {
-				continue
+			if ret {
+				hook.Fn(s)
 			}
+		} else {
+			hook.Fn(s)
 		}
-		hook.Fn(s)
 	}
 }

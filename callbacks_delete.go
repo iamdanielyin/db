@@ -1,6 +1,6 @@
 package db
 
-func registerDeleteCallbacks(callbacks *callbacks) *callbacks {
+func registerDeleteCallbacks(callbacks *clientWrapper) *clientWrapper {
 	processor := callbacks.Delete()
 	processor.Register("db:begin_transaction", beginTransactionCallback)
 	processor.Register("db:before_delete", beforeDeleteCallback)

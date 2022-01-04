@@ -9,7 +9,7 @@ import (
 
 type Member struct {
 	FirstName string
-	LastName  string
+	LastName  string `bson:"last_name"`
 }
 
 func main() {
@@ -83,4 +83,7 @@ func main() {
 	} else {
 		log.Printf("删除记录条数：%d\n", n)
 	}
+
+	// 清空所有
+	//_, _ = db.Model("Member").Find().DeleteMany()
 }

@@ -2,11 +2,12 @@ package db
 
 import (
 	"github.com/yuyitech/structs"
+	"log"
 	"reflect"
 	"strings"
 )
 
-func registerQueryCallbacks(callbacks *callbacks) *callbacks {
+func registerQueryCallbacks(callbacks *clientWrapper) *clientWrapper {
 	processor := callbacks.Query()
 	processor.Register("db:before_query", beforeQueryCallback)
 	processor.Register("db:query", queryCallback)
@@ -29,6 +30,7 @@ func queryCallback(s *Scope) {
 	switch s.Action {
 	case ActionQueryOne:
 		s.Error = res.One(s.Dest)
+		log.Println("=======", s.Dest)
 	case ActionQueryAll:
 		s.Error = res.All(s.Dest)
 	case ActionQueryCursor:
@@ -73,7 +75,7 @@ func preloadCallback(scope *Scope) {
 				scope.AddError(err)
 				break
 			}
-			if v, err := LookupMetadata(field.Relationship.Metadata); err != nil {
+			if v, err := LookupMetadata(field.Relationship.MetadataName); err != nil {
 				scope.AddError(err)
 				break
 			} else {
@@ -101,7 +103,7 @@ func preloadField(value interface{}, meta *Metadata, opts *PreloadOptions, sess 
 	case reflect.Struct:
 		var srcValue interface{}
 		ss := structs.New(value)
-		if f, ok := ss.FieldOk(relationship.SrcField); !ok || f.IsZero() {
+		if f, ok := ss.FieldOk(relationship.SrcFieldName); !ok || f.IsZero() {
 			return nil
 		} else {
 			srcValue = f.Value()
@@ -127,7 +129,7 @@ func preloadField(value interface{}, meta *Metadata, opts *PreloadOptions, sess 
 		var srcValue interface{}
 		for _, k := range indirectValue.MapKeys() {
 			key := k.Interface().(string)
-			if key == relationship.SrcField {
+			if key == relationship.SrcFieldName {
 				srcValue = indirectValue.MapIndex(k).Interface()
 				break
 			}
@@ -153,11 +155,11 @@ func preloadField(value interface{}, meta *Metadata, opts *PreloadOptions, sess 
 }
 
 func execPreload(relationship *Relationship, opts *PreloadOptions, sess *Connection, srcValue interface{}, targetValue interface{}) error {
-	refModel := sess.Model(relationship.Metadata)
+	refModel := sess.Model(relationship.MetadataName)
 	switch relationship.Type {
-	case RelationshipHasOne, RelationshipRefOne, RelationshipHasMany:
+	case RelationshipHasOne, RelationshipAssociateOne, RelationshipHasMany:
 		res := opts.SetResult(refModel.Find(Cond{
-			relationship.DstField: srcValue,
+			relationship.DstFieldName: srcValue,
 		}))
 		var err error
 		if relationship.Type == RelationshipHasMany {
@@ -168,20 +170,20 @@ func execPreload(relationship *Relationship, opts *PreloadOptions, sess *Connect
 		if err != nil {
 			return err
 		}
-	case RelationshipRefMany:
-		if _, err := LookupMetadata(relationship.IntMeta); err != nil {
+	case RelationshipAssociateMany:
+		if _, err := LookupMetadata(relationship.IntermediateMetadataName); err != nil {
 			return err
 		}
-		intModel := sess.Model(relationship.IntMeta)
+		intModel := sess.Model(relationship.IntermediateMetadataName)
 		var intData []map[string]interface{}
 		if err := intModel.Find(Cond{
-			relationship.IntSrcField: srcValue,
+			relationship.IntermediateSrcFieldName: srcValue,
 		}).All(&intData); err != nil {
 			return err
 		}
 		var dstIDs []interface{}
 		for _, item := range intData {
-			dstID := item[relationship.IntDstField]
+			dstID := item[relationship.IntermediateDstFieldName]
 			rv := reflect.ValueOf(dstID)
 			zero := reflect.Zero(rv.Type()).Interface()
 			current := rv.Interface()
@@ -190,7 +192,7 @@ func execPreload(relationship *Relationship, opts *PreloadOptions, sess *Connect
 			}
 		}
 		if len(dstIDs) > 0 {
-			res := opts.SetResult(refModel.Find(Cond{}.In(relationship.DstField, dstIDs)))
+			res := opts.SetResult(refModel.Find(Cond{}.In(relationship.DstFieldName, dstIDs)))
 			if err := res.All(targetValue); err != nil {
 				return err
 			}

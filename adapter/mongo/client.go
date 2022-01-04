@@ -16,6 +16,7 @@ type mongoClient struct {
 	source  db.DataSource
 	cs      connstring.ConnString
 	client  *mongo.Client
+	logger  db.Logger
 }
 
 func (c *mongoClient) StartTransaction() (db.Tx, error) {
@@ -58,6 +59,10 @@ func (c *mongoClient) WithTransaction(fn func(db.Tx) error) error {
 
 func (c *mongoClient) Name() string {
 	return c.source.Name
+}
+
+func (c *mongoClient) Logger() db.Logger {
+	return c.logger
 }
 
 func (c *mongoClient) Source() db.DataSource {

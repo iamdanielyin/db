@@ -58,6 +58,7 @@ type MetadataHook struct {
 func RegisterMiddleware(pattern string, fn func(*Scope)) error {
 	metadataHookMapMu.Lock()
 	defer metadataHookMapMu.Unlock()
+
 	pattern = strings.TrimSpace(pattern)
 	if pattern == "" || fn == nil {
 		return nil
@@ -124,7 +125,7 @@ func RegisterMiddleware(pattern string, fn func(*Scope)) error {
 	return nil
 }
 
-func filterFields(hook *MetadataHook, action string, value interface{}) bool {
+func testFieldsHook(hook *MetadataHook, action string, value interface{}) bool {
 	if IsNil(value) {
 		return false
 	}
@@ -132,8 +133,8 @@ func filterFields(hook *MetadataHook, action string, value interface{}) bool {
 	for _, field := range hook.Fields {
 		fieldMap[field] = true
 	}
-	switch action {
-	case ActionInsertOne, ActionInsertMany, ActionUpdateOne, ActionUpdateMany:
+	if action == ActionInsertOne || action == ActionInsertMany ||
+		action == ActionUpdateOne || action == ActionUpdateMany {
 		reflectValue := reflect.Indirect(reflect.ValueOf(value))
 		switch reflectValue.Kind() {
 		case reflect.Struct:
@@ -159,7 +160,7 @@ func filterFields(hook *MetadataHook, action string, value interface{}) bool {
 		case reflect.Array, reflect.Slice:
 			for i := 0; i < reflectValue.Len(); i++ {
 				item := reflectValue.Index(i).Interface()
-				if ok := filterFields(hook, action, item); ok {
+				if ok := testFieldsHook(hook, action, item); ok {
 					return true
 				}
 			}
@@ -185,71 +186,6 @@ func filterFields(hook *MetadataHook, action string, value interface{}) bool {
 					}
 				}
 			}
-		}
-	case ActionDeleteOne, ActionDeleteMany:
-		return filterFieldsByCond(hook, value)
-	}
-	return false
-}
-
-func filterFieldsByCond(hook *MetadataHook, condOrUnion interface{}) bool {
-	execCond := func(c *Cond) bool {
-		props := make(map[string]bool)
-		for k, v := range *c {
-			split := strings.Split(k, " ")
-			if !IsNil(v) {
-				props[split[0]] = true
-			}
-		}
-		exists := make(map[string]bool)
-		for _, name := range hook.Fields {
-			if has := props[name]; !has {
-				if hook.FieldOperator == HookFieldOperatorOr {
-					continue
-				}
-				return false
-			}
-			if hook.FieldOperator == HookFieldOperatorOr {
-				return true
-			} else {
-				exists[name] = true
-				if len(exists) == len(hook.Fields) {
-					return true
-				}
-			}
-		}
-		return false
-	}
-	execUnion := func(val *Union) bool {
-		for _, item := range val.Filters {
-			result := filterFieldsByCond(hook, item)
-			if val.Operator == OperatorOr {
-				if result {
-					return true
-				}
-			} else if !result {
-				return false
-			}
-		}
-		return false
-	}
-	indirectValue := reflect.Indirect(reflect.ValueOf(condOrUnion))
-	switch indirectValue.Kind() {
-	case reflect.Array, reflect.Slice:
-		for i := 0; i < indirectValue.Len(); i++ {
-			item := indirectValue.Index(i).Interface()
-			return filterFieldsByCond(hook, item)
-		}
-	default:
-		switch val := condOrUnion.(type) {
-		case Cond:
-			return execCond(&val)
-		case *Cond:
-			return execCond(val)
-		case Union:
-			return execUnion(&val)
-		case *Union:
-			return execUnion(val)
 		}
 	}
 	return false

@@ -16,7 +16,7 @@ var (
 type LogicDeleteRule struct {
 	Pattern  string
 	SetValue map[string]string
-	GetValue interface{} // 元素可能为 Cond 或 Union
+	GetValue Conditional // 元素可能为 Cond 或 Union
 }
 
 func (rule *LogicDeleteRule) ParseSetValue() map[string]interface{} {

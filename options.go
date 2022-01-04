@@ -7,12 +7,12 @@ const (
 )
 
 type AssociationOption struct {
-	Field         string
-	Action        string
-	AutoUpdate    bool
-	AutoCreate    bool
-	AutoRemove    bool
-	DeleteObjects bool
+	Field              string
+	Action             string
+	DisableAutoCreate  bool
+	DisableAutoUpdate  bool
+	DisableAutoRemove  bool
+	DeleteAssociations bool
 }
 
 type InsertOptions struct {
@@ -28,7 +28,7 @@ type DeleteOptions struct {
 
 type PreloadOptions struct {
 	Path     string
-	Match    interface{}
+	Match    Conditional
 	Select   []string
 	OrderBys []string
 	Page     uint

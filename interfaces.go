@@ -4,11 +4,12 @@ import "context"
 
 type Adapter interface {
 	Name() string
-	Connect(context.Context, DataSource) (Client, error)
+	Connect(context.Context, DataSource, Logger) (Client, error)
 }
 
 type Client interface {
 	Name() string
+	Logger() Logger
 	Source() DataSource
 	Disconnect(context.Context) error
 	StartTransaction() (Tx, error)
@@ -26,8 +27,8 @@ type Collection interface {
 }
 
 type Result interface {
-	And(...interface{}) Result
-	Or(...interface{}) Result
+	And(...Conditional) Result
+	Or(...Conditional) Result
 	Project(...string) Result
 	One(dst interface{}) error
 	All(dst interface{}) error

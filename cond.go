@@ -23,6 +23,11 @@ const (
 	OperatorOr       = "$or"
 )
 
+type Conditional interface {
+	Operator() string
+	Conditions() []Conditional
+}
+
 type ConditionEntry struct {
 	Key      string
 	Operator string
@@ -121,21 +126,50 @@ func (c Cond) Entries() (entries []ConditionEntry) {
 	return
 }
 
+func (c Cond) Operator() string {
+	return OperatorAnd
+}
+
+func (c Cond) Conditions() []Conditional {
+	return []Conditional{c}
+}
+
 type Union struct {
-	Operator string
-	Filters  []interface{} // 元素可能为 Cond 或 Union
+	operator   string
+	conditions []Conditional // 元素可能为 Cond 或 Union
 }
 
-func And(ops ...interface{}) interface{} {
-	return &Union{
-		Operator: OperatorAnd,
-		Filters:  ops,
-	}
+func (u *Union) Operator() string {
+	return u.operator
 }
 
-func Or(ops ...interface{}) interface{} {
-	return &Union{
-		Operator: OperatorOr,
-		Filters:  ops,
+func (u *Union) Conditions() []Conditional {
+	return u.conditions
+}
+
+func NewUnion(op string, v []Conditional) Conditional {
+	op = strings.TrimSpace(op)
+	if op != "" && len(v) > 0 {
+		var conditions []Conditional
+		for _, item := range v {
+			if item != nil && len(item.Conditions()) > 0 {
+				conditions = append(conditions, item)
+			}
+		}
+		if len(conditions) > 0 {
+			return &Union{
+				operator:   op,
+				conditions: conditions,
+			}
+		}
 	}
+	return nil
+}
+
+func And(v ...Conditional) Conditional {
+	return NewUnion(OperatorAnd, v)
+}
+
+func Or(v ...Conditional) Conditional {
+	return NewUnion(OperatorAnd, v)
 }

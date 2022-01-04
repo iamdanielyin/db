@@ -10,11 +10,11 @@ import (
 type User struct {
 	ID        string
 	RealName  string
-	IDCard    *IDCard    `db:"ref=type:HO,meta:IDCard,src:ID,dst:UserID"`
-	BankCards []BankCard `db:"ref=type:HM,meta:BankCard,src:ID,dst:UserID"`
+	IDCard    *IDCard    `db:"ref=type:HAS_ONE,dst:UserID"`
+	BankCards []BankCard `db:"ref=type:HAS_MANY,dst:UserID"`
 	CompanyID string
-	Company   *Company  `db:"ref=type:RO,meta:Company,src:CompanyID,dst:ID"`
-	Projects  []Project `db:"ref=type:RM,meta:Project,src:ID,dst:ID,int_meta:UserProjectRef,int_src:UserID,int_dst:ProjectID"`
+	Company   *Company  `db:"ref=type:ASSC_ONE,src:CompanyID"`
+	Projects  []Project `db:"ref=type:ASSC_MANY,int_meta:UserProjectRef,int_src:UserID,int_dst:ProjectID"`
 }
 
 // IDCard 身份证
@@ -22,7 +22,7 @@ type IDCard struct {
 	ID      string
 	CardNum string
 	UserID  string
-	User    *User `db:"ref=type:RO,meta:User,src:UserID,dst:ID"`
+	User    *User `db:"ref=type:ASSC_ONE,src:UserID"`
 }
 
 // BankCard 银行卡

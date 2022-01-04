@@ -23,8 +23,8 @@ const (
 	ActionQueryPage   = "QUERY_PAGE"
 )
 
-func callbackClientWrapper(raw Client, sess *Connection) *callbacks {
-	return &callbacks{
+func newClientWrapper(raw Client, sess *Connection) *clientWrapper {
+	return &clientWrapper{
 		rawClient: raw,
 		processors: map[string]*processor{
 			"create": {sess: sess},
@@ -37,39 +37,43 @@ func callbackClientWrapper(raw Client, sess *Connection) *callbacks {
 	}
 }
 
-type callbacks struct {
+type clientWrapper struct {
 	processors map[string]*processor
 	rawClient  Client
 }
 
-func (cs *callbacks) Name() string {
+func (cs *clientWrapper) Name() string {
 	return cs.rawClient.Name()
 }
 
-func (cs *callbacks) Source() DataSource {
+func (cs *clientWrapper) Logger() Logger {
+	return cs.rawClient.Logger()
+}
+
+func (cs *clientWrapper) Source() DataSource {
 	return cs.rawClient.Source()
 }
 
-func (cs *callbacks) Disconnect(ctx context.Context) error {
+func (cs *clientWrapper) Disconnect(ctx context.Context) error {
 	return cs.rawClient.Disconnect(ctx)
 }
 
-func (cs *callbacks) Model(metadata Metadata) Collection {
+func (cs *clientWrapper) Model(metadata Metadata) Collection {
 	rawColl := cs.rawClient.Model(metadata)
-	return &callbacksCollection{callbacks: cs, rawColl: rawColl}
+	return &callbacksCollection{client: cs, rawColl: rawColl}
 }
 
-func (cs *callbacks) StartTransaction() (Tx, error) {
+func (cs *clientWrapper) StartTransaction() (Tx, error) {
 	return cs.rawClient.StartTransaction()
 }
 
-func (cs *callbacks) WithTransaction(f func(Tx) error) error {
+func (cs *clientWrapper) WithTransaction(f func(Tx) error) error {
 	return cs.rawClient.WithTransaction(f)
 }
 
 type callbacksCollection struct {
-	callbacks *callbacks
-	rawColl   Collection
+	client  *clientWrapper
+	rawColl Collection
 }
 
 func (cc *callbacksCollection) NewScope(scope *Scope) *Scope {
@@ -103,7 +107,7 @@ func (cc *callbacksCollection) InsertOne(i interface{}, opts ...*InsertOptions) 
 	if len(opts) > 0 && opts[0] != nil {
 		scope.InsertOptions = opts[0]
 	}
-	cc.callbacks.Create().Execute(cc.NewScope(scope))
+	cc.client.Create().Execute(cc.NewScope(scope))
 	return scope.InsertOneResult, scope.Error
 }
 
@@ -116,14 +120,63 @@ func (cc *callbacksCollection) InsertMany(i interface{}, opts ...*InsertOptions)
 	if len(opts) > 0 && opts[0] != nil {
 		scope.InsertOptions = opts[0]
 	}
-	cc.callbacks.Create().Execute(cc.NewScope(scope))
+	cc.client.Create().Execute(cc.NewScope(scope))
 	return scope.InsertManyResult, scope.Error
 }
 
-func (cc *callbacksCollection) Find(i ...interface{}) Result {
+func (cc *callbacksCollection) testKeyValuePairs(v []interface{}) bool {
+	if len(v) > 0 && len(v)%2 == 0 {
+		if _, ok := v[0].(string); !ok {
+			return true
+		}
+	}
+	return false
+}
+
+func (cc *callbacksCollection) parseKeyValuePairs(v []interface{}) *Cond {
+	var (
+		max  = len(v)
+		cond = make(Cond)
+	)
+	for i := 0; i < max; i++ {
+		if i%2 != 0 {
+			continue
+		}
+		if key, ok := v[i].(string); ok {
+			var value interface{}
+			if i+1 < max {
+				value = v[i+1]
+			}
+			if !IsNil(value) {
+				cond[key] = value
+			}
+		}
+	}
+
+	if len(cond) > 0 {
+		return &cond
+	}
+	return nil
+}
+
+func (cc *callbacksCollection) Find(v ...interface{}) Result {
+	var conditions []Conditional
+	if cc.testKeyValuePairs(v) {
+		if cond := cc.parseKeyValuePairs(v); cond != nil {
+			conditions = append(conditions, cond)
+		}
+	} else {
+		for _, item := range v {
+			if vv, ok := item.(Conditional); ok {
+				if vv != nil && len(vv.Conditions()) > 0 {
+					conditions = append(conditions, vv)
+				}
+			}
+		}
+	}
 	scope := &Scope{
 		Coll:       cc.rawColl,
-		Conditions: i,
+		Conditions: conditions,
 	}
 	return &callbacksResult{
 		cc:    cc,
@@ -136,12 +189,12 @@ type callbacksResult struct {
 	scope *Scope
 }
 
-func (cr *callbacksResult) And(i ...interface{}) Result {
-	cr.scope.Conditions = append(cr.scope.Conditions, And(i...))
+func (cr *callbacksResult) And(i ...Conditional) Result {
+	cr.scope.AddCondition(And(i...))
 	return cr
 }
 
-func (cr *callbacksResult) Or(i ...interface{}) Result {
+func (cr *callbacksResult) Or(i ...Conditional) Result {
 	cr.scope.Conditions = append(cr.scope.Conditions, Or(i...))
 	return cr
 }
@@ -194,26 +247,26 @@ func (cr *callbacksResult) Preload(i interface{}) Result {
 func (cr *callbacksResult) One(dst interface{}) error {
 	cr.scope.Dest = dst
 	cr.scope.Action = ActionQueryOne
-	cr.cc.callbacks.Query().Execute(cr.cc.NewScope(cr.scope))
+	cr.cc.client.Query().Execute(cr.cc.NewScope(cr.scope))
 	return cr.scope.Error
 }
 
 func (cr *callbacksResult) All(dst interface{}) error {
 	cr.scope.Dest = dst
 	cr.scope.Action = ActionQueryAll
-	cr.cc.callbacks.Query().Execute(cr.cc.NewScope(cr.scope))
+	cr.cc.client.Query().Execute(cr.cc.NewScope(cr.scope))
 	return cr.scope.Error
 }
 
 func (cr *callbacksResult) Cursor() (Cursor, error) {
 	cr.scope.Action = ActionQueryCursor
-	cr.cc.callbacks.Query().Execute(cr.cc.NewScope(cr.scope))
+	cr.cc.client.Query().Execute(cr.cc.NewScope(cr.scope))
 	return &callbacksCursor{cr: cr, rawCursor: cr.scope.Cursor}, cr.scope.Error
 }
 
 func (cr *callbacksResult) Count() (int, error) {
 	cr.scope.Action = ActionQueryCount
-	cr.cc.callbacks.Query().Execute(cr.cc.NewScope(cr.scope))
+	cr.cc.client.Query().Execute(cr.cc.NewScope(cr.scope))
 	return cr.scope.TotalRecords, cr.scope.Error
 }
 
@@ -223,7 +276,7 @@ func (cr *callbacksResult) TotalRecords() (int, error) {
 
 func (cr *callbacksResult) TotalPages() (int, error) {
 	cr.scope.Action = ActionQueryPage
-	cr.cc.callbacks.Query().Execute(cr.cc.NewScope(cr.scope))
+	cr.cc.client.Query().Execute(cr.cc.NewScope(cr.scope))
 	return cr.scope.TotalPages, cr.scope.Error
 }
 
@@ -233,7 +286,7 @@ func (cr *callbacksResult) UpdateOne(i interface{}, opts ...*UpdateOptions) (int
 	if len(opts) > 0 && opts[0] != nil {
 		cr.scope.UpdateOptions = opts[0]
 	}
-	cr.cc.callbacks.Update().Execute(cr.cc.NewScope(cr.scope))
+	cr.cc.client.Update().Execute(cr.cc.NewScope(cr.scope))
 	return cr.scope.RecordsAffected, cr.scope.Error
 }
 
@@ -243,7 +296,7 @@ func (cr *callbacksResult) UpdateMany(i interface{}, opts ...*UpdateOptions) (in
 	if len(opts) > 0 && opts[0] != nil {
 		cr.scope.UpdateOptions = opts[0]
 	}
-	cr.cc.callbacks.Update().Execute(cr.cc.NewScope(cr.scope))
+	cr.cc.client.Update().Execute(cr.cc.NewScope(cr.scope))
 	return cr.scope.RecordsAffected, cr.scope.Error
 }
 
@@ -252,7 +305,7 @@ func (cr *callbacksResult) DeleteOne(opts ...*DeleteOptions) (int, error) {
 	if len(opts) > 0 && opts[0] != nil {
 		cr.scope.DeleteOptions = opts[0]
 	}
-	cr.cc.callbacks.Delete().Execute(cr.cc.NewScope(cr.scope))
+	cr.cc.client.Delete().Execute(cr.cc.NewScope(cr.scope))
 	return cr.scope.RecordsAffected, cr.scope.Error
 }
 
@@ -261,7 +314,7 @@ func (cr *callbacksResult) DeleteMany(opts ...*DeleteOptions) (int, error) {
 	if len(opts) > 0 && opts[0] != nil {
 		cr.scope.DeleteOptions = opts[0]
 	}
-	cr.cc.callbacks.Delete().Execute(cr.cc.NewScope(cr.scope))
+	cr.cc.client.Delete().Execute(cr.cc.NewScope(cr.scope))
 	return cr.scope.RecordsAffected, cr.scope.Error
 }
 
@@ -300,27 +353,27 @@ type callback struct {
 	processor *processor
 }
 
-func (cs *callbacks) Create() *processor {
+func (cs *clientWrapper) Create() *processor {
 	return cs.processors["create"]
 }
 
-func (cs *callbacks) Query() *processor {
+func (cs *clientWrapper) Query() *processor {
 	return cs.processors["query"]
 }
 
-func (cs *callbacks) Update() *processor {
+func (cs *clientWrapper) Update() *processor {
 	return cs.processors["update"]
 }
 
-func (cs *callbacks) Delete() *processor {
+func (cs *clientWrapper) Delete() *processor {
 	return cs.processors["delete"]
 }
 
-func (cs *callbacks) Row() *processor {
+func (cs *clientWrapper) Row() *processor {
 	return cs.processors["row"]
 }
 
-func (cs *callbacks) Raw() *processor {
+func (cs *clientWrapper) Raw() *processor {
 	return cs.processors["raw"]
 }
 

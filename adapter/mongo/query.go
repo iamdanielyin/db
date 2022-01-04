@@ -24,12 +24,12 @@ type mongoResult struct {
 	filter     bson.D
 }
 
-func (r *mongoResult) And(i ...interface{}) db.Result {
+func (r *mongoResult) And(i ...db.Conditional) db.Result {
 	r.conditions = append(r.conditions, db.And(i...))
 	return r
 }
 
-func (r *mongoResult) Or(i ...interface{}) db.Result {
+func (r *mongoResult) Or(i ...db.Conditional) db.Result {
 	r.conditions = append(r.conditions, db.Or(i...))
 	return r
 }
