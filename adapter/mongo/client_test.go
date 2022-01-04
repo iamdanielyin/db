@@ -1,7 +1,7 @@
 package mongo
 
 import (
-	"github.com/yuyitech/db"
+	"github.com/iamdanielyin/db"
 	"os"
 	"testing"
 )

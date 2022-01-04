@@ -52,7 +52,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/yuyitech/db"
+	"github.com/iamdanielyin/db"
 )
 
 type Member struct {

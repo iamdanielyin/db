@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/yuyitech/db"
-	_ "github.com/yuyitech/db/adapter/mongo"
+	"github.com/iamdanielyin/db"
+	_ "github.com/iamdanielyin/db/adapter/mongo"
 	"log"
 	"os"
 )

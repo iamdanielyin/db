@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/yuyitech/db"
+	"github.com/iamdanielyin/db"
 	"log"
 	"os"
 )

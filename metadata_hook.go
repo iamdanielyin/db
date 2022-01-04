@@ -3,7 +3,7 @@ package db
 import (
 	"github.com/buger/jsonparser"
 	"github.com/gobwas/glob"
-	"github.com/yuyitech/structs"
+	"github.com/iamdanielyin/structs"
 	"reflect"
 	"strings"
 	"sync"

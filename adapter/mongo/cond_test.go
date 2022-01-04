@@ -2,8 +2,8 @@ package mongo_test
 
 import (
 	"fmt"
-	"github.com/yuyitech/db"
-	"github.com/yuyitech/db/adapter/mongo"
+	"github.com/iamdanielyin/db"
+	"github.com/iamdanielyin/db/adapter/mongo"
 	"reflect"
 	"testing"
 )

@@ -2,7 +2,7 @@ package mongo
 
 import (
 	"context"
-	"github.com/yuyitech/db"
+	"github.com/iamdanielyin/db"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readconcern"

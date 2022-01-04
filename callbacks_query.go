@@ -1,7 +1,7 @@
 package db
 
 import (
-	"github.com/yuyitech/structs"
+	"github.com/iamdanielyin/structs"
 	"log"
 	"reflect"
 	"strings"

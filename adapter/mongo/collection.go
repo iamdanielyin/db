@@ -2,8 +2,8 @@ package mongo
 
 import (
 	"context"
-	"github.com/yuyitech/db"
-	"github.com/yuyitech/structs"
+	"github.com/iamdanielyin/db"
+	"github.com/iamdanielyin/structs"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
