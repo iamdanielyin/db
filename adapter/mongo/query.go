@@ -100,7 +100,7 @@ func (r *mongoResult) Count() (int, error) {
 	return int(val), nil
 }
 
-func (r *mongoResult) Preload(i interface{}) db.Result {
+func (r *mongoResult) Preload(path string, opts ...*db.PreloadOptions) db.Result {
 	return r
 }
 

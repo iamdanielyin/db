@@ -38,7 +38,7 @@ type Result interface {
 	Paginate(uint) Result
 	Page(uint) Result
 	TotalRecords() (int, error)
-	Preload(interface{}) Result
+	Preload(string, ...*PreloadOptions) Result
 	TotalPages() (int, error)
 	UpdateOne(interface{}, ...*UpdateOptions) (int, error)
 	UpdateMany(interface{}, ...*UpdateOptions) (int, error)

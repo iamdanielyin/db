@@ -41,10 +41,8 @@
 - [元数据引用](#htZqq)
    - [关系定义](#inKDt)
    - [元数据定义](#edQl8)
-   - [拥有一个](#hn3OE)
-   - [拥有多个](#B0tvR)
-   - [关联一个](#QVMkd)
-   - [关联多个](#xx3Gi)
+   - [引用联查](#hn3OE)
+   - [引用变更](#B0tvR)
 <a name="ZH38i"></a>
 # 快速开始
 ```go
@@ -822,16 +820,10 @@ db.RegisterMiddleware("User:beforeUpdate:PhoneNumber|EmailAddress", func(scope *
    - `INSERT_MANY` - 匹配`InsertManyDocs`；
    - `UPDATE_XXX` - 匹配`UpdateDoc`；
    - `DELETE_XXX` - 匹配`Conditions`。
-  <a name="htZqq"></a>
-# 元数据关联
-在常见的ORM框架中，我们常常听到以下几种关联关系：
 
-- 一对一
-- 一对多
-- 多对一
-- 多对多
+<a name="htZqq"></a>
+# 元数据引用
 
-这几种关联关系对于新手来说往往难以理解，建模时经常会不知所措。但不论判断哪种关联关系，一定要先确定参照物，就像你和你爸的关系，站在你爸的角度，他叫你儿子，站在你的角度，你叫他爸爸，不同的角度下的叫法也是不同的。
 <a name="inKDt"></a>
 ## 关系定义
 
@@ -844,6 +836,7 @@ db.RegisterMiddleware("User:beforeUpdate:PhoneNumber|EmailAddress", func(scope *
 
 - **拥有关系**中，**主模型**对**子模型**拥有完整**读写权**，即我们可以在操作主模型的同时对其子模型进行增删改查。
 - **关联关系**中，**主模型**对**被关联模型**仅拥有**只读权**，即我们只能联查被关联模型、与其建立关联关系以及解除关联关系。
+
 <a name="edQl8"></a>
 ## 元数据定义
 我们通过ref属性来定义以上四种关联关系，参数如下：
@@ -866,8 +859,8 @@ db.RegisterMiddleware("User:beforeUpdate:PhoneNumber|EmailAddress", func(scope *
 type User struct {
 	ID        string
 	RealName  string
-	IDCard    *IDCard    `db:"ref=type:HAS_ONE,dst:UserID"`
-	BankCards []BankCard `db:"ref=type:HAS_MANY,dst:UserID"`
+	IDCard    *IDCard    `db:"ref=type:HAS_ONE,dst:OwnerID"`
+	BankCards []BankCard `db:"ref=type:HAS_MANY,dst:OwnerID"`
 	CompanyID string
 	Company   *Company  `db:"ref=type:ASSC_ONE,src:CompanyID"`
 	Projects  []Project `db:"ref=type:ASSC_MANY,int_meta:UserProjectRef,int_src:UserID,int_dst:ProjectID"`
@@ -875,17 +868,19 @@ type User struct {
 
 // IDCard 身份证
 type IDCard struct {
-	ID      string
-	CardNum string
-	UserID  string
-	User    *User `db:"ref=type:ASSC_ONE,src:UserID"`
+    ID      string
+    CardNum string
+    OwnerID string
+    Owner   *User `db:"ref=type:ASSC_ONE,src:OwnerID"`
 }
 
 // BankCard 银行卡
 type BankCard struct {
 	ID      string
 	CardNum string
-	UserID  string
+	OwnerID string
+	Owner   *User `db:"ref=type:ASSC_ONE,src:OwnerID"`
+	Remark  string
 }
 
 // Company 公司
@@ -908,84 +903,58 @@ type UserProjectRef struct {
 ```
 
 <a name="hn3OE"></a>
-## 拥有一个
+## 引用联查
 
-### 引用联查
-
-#### 单个查询
-
-#### 多个查询
-
-#### 迭代查询
-
-### 引用变更
-
-我们整理了三种场景
-
-#### 引用替换
-
-#### 引用合并
-
-#### 引用删除
-
-#### 建立关系
-
-#### 解除关系
-
-#### 引用新增
-
-#### 引用修改
-
-#### 引用删除
-
-
-
-<a name="B0tvR"></a>
-## 拥有多个
-
-### 引用联查
-
-#### 单个查询
-
-#### 多个查询
-
-#### 迭代查询
-
-### 引用变更
-
-以下三种常见场景，几乎覆盖子档案的联动变更的所有场景：
-
-- 引用替换：使用传入列表覆盖数据库列表；
-- 引用合并：将传入列表合并至数据库列表；
-- 引用删除：仅删除传入列表的数据。
-
-注意：默认情况下，引用删除时都只会删除与主档案之间的引用关系，并不会删除引用档案本身，如需在删除引用关系的同时也一并删掉引用档案，请通过指定`DeleteObjects`参数。
-
-#### 引用新增
+引用联查比较简单，所有关系的联查语法都是统一的，大多数场景下，我们是这样使用的：
 
 ```go
-db.Model("User").Find().DeleteOne()
+var users []User
+res := db.Model("User").Find().
+    Preload("IDCard").
+    Preload("BankCards").
+    Preload("Company").
+    Preload("Projects")
+res.All(&users)
 ```
 
-#### 引用修改
+也可以传入联查参数：
+```go
+var users []User
+res := db.Model("User").Find().Preload("BankCards", &db.PreloadOptions{
+    Select: []string{"ID", "CardNum"}  
+})
+res.All(&users)
+```
 
-#### 引用删除
+完整联查参数如下：
+- `Match` - 额外查询条件，可传入`db.Cond`或`db.And()`、`db.Or()`；
+- `Select` - 指定查询字段名称（不指定时查询所有字段）；
+- `OrderBys` - 指定排序字段名（逆序以负号开头，与`OrderBy`传参方式一致）；
+- `Size` - 分页查询，指定分页条数（默认查全部）；
+- `Page` - 分页查询，指定查询页码。
 
-#### 建立关系
+多级联查（无层级限制）：
+```go
+var users []User
+res := db.Model("User").Find().
+    Preload("IDCard.Owner").
+    Preload("BankCards.Owner")
+res.All(&users)
+```
 
-#### 解除关系
+<a name="B0tvR"></a>
+## 引用变更
 
-#### 引用新增
+引用变更的语法稍复杂些，需按情况处理。
 
-#### 引用修改
-
-#### 引用删除
-
-
-<a name="QVMkd"></a>
-## 关联一个
+针对`拥有一个(HAS_ONE)`和`引用一个(ASSC_ONE)`： 直接删掉其引用关系即可。
 
 
-<a name="xx3Gi"></a>
-## 关联多个
+针对`拥有一个(HAS_MANY)`和`引用一个(ASSC_MANY)`有以下三种细分场景：
+
+1. 引用替换（`ASSOC_REPLACE`）：使用传入列表覆盖数据库列表；
+1. 引用合并（`ASSOC_MERGE`）：将传入列表合并至数据库列表；
+1. 引用删除（`ASSOC_REMOVE`）：仅删除传入列表的数据。
+
+注意：在拥有关系中，由于主模型对子模型拥有读写权，但在默认情况下，我们在引用删除时也只会删除其引用关系，并不会删除子档案本身，如需在删除关系的同时一并删子档案，需额外指定`DeleteObjects`参数实现。
 
