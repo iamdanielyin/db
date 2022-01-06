@@ -13,8 +13,8 @@ type User struct {
 	IDCard    *IDCard    `db:"ref=type:HAS_ONE,dst:UserID"`
 	BankCards []BankCard `db:"ref=type:HAS_MANY,dst:UserID"`
 	CompanyID string
-	Company   *Company  `db:"ref=type:ASSC_ONE,src:CompanyID"`
-	Projects  []Project `db:"ref=type:ASSC_MANY,int_meta:UserProjectRef,int_src:UserID,int_dst:ProjectID"`
+	Company   *Company  `db:"ref=type:REF_ONE,src:CompanyID"`
+	Projects  []Project `db:"ref=type:REF_MANY,int_meta:UserProjectRef,int_src:UserID,int_dst:ProjectID"`
 }
 
 // IDCard 身份证
@@ -22,7 +22,7 @@ type IDCard struct {
 	ID      string
 	CardNum string
 	UserID  string
-	User    *User `db:"ref=type:ASSC_ONE,src:UserID"`
+	User    *User `db:"ref=type:REF_ONE,src:UserID"`
 }
 
 // BankCard 银行卡

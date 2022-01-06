@@ -157,7 +157,7 @@ func preloadField(value interface{}, meta *Metadata, opts *PreloadOptions, sess 
 func execPreload(relationship *Relationship, opts *PreloadOptions, sess *Connection, srcValue interface{}, targetValue interface{}) error {
 	refModel := sess.Model(relationship.MetadataName)
 	switch relationship.Type {
-	case RelationshipHasOne, RelationshipAssociateOne, RelationshipHasMany:
+	case RelationshipHasOne, RelationshipRefOne, RelationshipHasMany:
 		res := opts.SetResult(refModel.Find(Cond{
 			relationship.DstFieldName: srcValue,
 		}))
@@ -170,7 +170,7 @@ func execPreload(relationship *Relationship, opts *PreloadOptions, sess *Connect
 		if err != nil {
 			return err
 		}
-	case RelationshipAssociateMany:
+	case RelationshipRefMany:
 		if _, err := LookupMetadata(relationship.IntermediateMetadataName); err != nil {
 			return err
 		}

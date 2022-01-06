@@ -21,8 +21,8 @@ type Collection interface {
 	Name() string
 	Metadata() Metadata
 	Session() *Connection
-	InsertOne(interface{}, ...*InsertOptions) (InsertOneResult, error)
-	InsertMany(interface{}, ...*InsertOptions) (InsertManyResult, error)
+	InsertOne(interface{}, ...func(*InsertOptions)) (InsertOneResult, error)
+	InsertMany(interface{}, ...func(*InsertOptions)) (InsertManyResult, error)
 	Find(...interface{}) Result
 }
 
@@ -38,13 +38,13 @@ type Result interface {
 	Paginate(uint) Result
 	Page(uint) Result
 	TotalRecords() (int, error)
-	Preload(string, ...*PreloadOptions) Result
+	Preload(string, ...func(*PreloadOptions)) Result
 	TotalPages() (int, error)
-	UpdateOne(interface{}, ...*UpdateOptions) (int, error)
-	UpdateMany(interface{}, ...*UpdateOptions) (int, error)
+	UpdateOne(interface{}, ...func(*UpdateOptions)) (int, error)
+	UpdateMany(interface{}, ...func(*UpdateOptions)) (int, error)
 	Unscoped() Result
-	DeleteOne(...*DeleteOptions) (int, error)
-	DeleteMany(...*DeleteOptions) (int, error)
+	DeleteOne(...func(*DeleteOptions)) (int, error)
+	DeleteMany(...func(*DeleteOptions)) (int, error)
 }
 
 type Tx interface {

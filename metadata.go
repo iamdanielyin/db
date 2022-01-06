@@ -42,18 +42,18 @@ type MetadataInterface interface {
 	Metadata() Metadata
 }
 
-func (m *Metadata) Session() *Connection {
+func (m Metadata) Session() *Connection {
 	return m.source
 }
 
-func (m *Metadata) MustNativeName() string {
+func (m Metadata) MustNativeName() string {
 	if m.NativeName != "" {
 		return m.NativeName
 	}
 	return strcase.ToSnake(m.Name)
 }
 
-func (m *Metadata) FieldByName(name string) (f Field, has bool) {
+func (m Metadata) FieldByName(name string) (f Field, has bool) {
 	f, has = m.Properties[name]
 	if !has {
 		f, has = m.nativeProperties[name]
@@ -61,7 +61,7 @@ func (m *Metadata) FieldByName(name string) (f Field, has bool) {
 	return
 }
 
-func (m *Metadata) MustFieldNativeName(name string) string {
+func (m Metadata) MustFieldNativeName(name string) string {
 	if f, has := m.FieldByName(name); has {
 		return f.MustNativeName()
 	} else if strings.HasPrefix(name, "!") {
@@ -122,7 +122,7 @@ type Field struct {
 	Relationship Relationship
 }
 
-func (f *Field) MustNativeName() string {
+func (f Field) MustNativeName() string {
 	if f.NativeName != "" {
 		return f.NativeName
 	}
@@ -181,4 +181,12 @@ func LookupMetadata(name string) (meta Metadata, err error) {
 	}
 
 	return
+}
+
+func MustLookupMetadata(name string) Metadata {
+	meta, err := LookupMetadata(name)
+	if err != nil {
+		meta = Metadata{Name: name}
+	}
+	return meta
 }

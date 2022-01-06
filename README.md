@@ -829,8 +829,8 @@ db.RegisterMiddleware("User:beforeUpdate:PhoneNumber|EmailAddress", func(scope *
 
 1. **拥有一个**（Has One）：用户拥有一张身份证，每个用户对自己的身份证信息拥有**读写权**（一对一）；
 1. **拥有多个**（Has Many）：用户拥有多张银行卡，每个用户对自己的银行卡信息拥有**读写权**（一对多）；
-1. **关联一个**（Associate One）：用户属于一个公司，每个用户对自己所属的公司拥有**只读权**，即每个用户不能修改公司资料（一对一）；
-1. **关联多个**（Associate Many）：用户参与多个项目，每个用户对自己参与的项目拥有**只读权**（多对多）。
+1. **关联一个**（Ref One）：用户属于一个公司，每个用户对自己所属的公司拥有**只读权**，即每个用户不能修改公司资料（一对一）；
+1. **关联多个**（Ref Many）：用户参与多个项目，每个用户对自己参与的项目拥有**只读权**（多对多）。
 
 综上：
 
@@ -844,14 +844,14 @@ db.RegisterMiddleware("User:beforeUpdate:PhoneNumber|EmailAddress", func(scope *
 - `type` - 关系类型（必填）；
    - `HAS_ONE` - 拥有一个
    - `HAS_MANY` - 拥有多个
-   - `ASSC_ONE` - 关联一个
-   - `ASSC_MANY` - 关联多个
+   - `REF_ONE` - 关联一个
+   - `REF_MANY` - 关联多个
 - `meta` - 被引用元数据名称（可选，默认解析结构体名称）；
 - `src` - 当前元数据中的关系字段名称（可选，默认为主键名称）；
 - `dst` - 被引用元数据中的关系字段名称（可选，默认为主键名称）；
-- `int_meta` - 类似多对多种的中间表，指定元数据名称（当`type=ASSC_MANY`时必填）
-- `int_meta_src` - 中间表中当前元数据中的关系字段名称（当`type=ASSC_MANY`时必填）
-- `int_meta_dst` - 中间表中被引用元数据中的关系字段名称（当`type=ASSC_MANY`时必填）
+- `int_meta` - 类似多对多种的中间表，指定元数据名称（当`type=REF_MANY`时必填）
+- `int_meta_src` - 中间表中当前元数据中的关系字段名称（当`type=REF_MANY`时必填）
+- `int_meta_dst` - 中间表中被引用元数据中的关系字段名称（当`type=REF_MANY`时必填）
 
 以下是配置示例：
 ```go
@@ -862,8 +862,8 @@ type User struct {
 	IDCard    *IDCard    `db:"ref=type:HAS_ONE,dst:OwnerID"`
 	BankCards []BankCard `db:"ref=type:HAS_MANY,dst:OwnerID"`
 	CompanyID string
-	Company   *Company  `db:"ref=type:ASSC_ONE,src:CompanyID"`
-	Projects  []Project `db:"ref=type:ASSC_MANY,int_meta:UserProjectRef,int_src:UserID,int_dst:ProjectID"`
+	Company   *Company  `db:"ref=type:REF_ONE,src:CompanyID"`
+	Projects  []Project `db:"ref=type:REF_MANY,int_meta:UserProjectRef,int_src:UserID,int_dst:ProjectID"`
 }
 
 // IDCard 身份证
@@ -871,7 +871,7 @@ type IDCard struct {
     ID      string
     CardNum string
     OwnerID string
-    Owner   *User `db:"ref=type:ASSC_ONE,src:OwnerID"`
+    Owner   *User `db:"ref=type:REF_ONE,src:OwnerID"`
 }
 
 // BankCard 银行卡
@@ -879,7 +879,7 @@ type BankCard struct {
 	ID      string
 	CardNum string
 	OwnerID string
-	Owner   *User `db:"ref=type:ASSC_ONE,src:OwnerID"`
+	Owner   *User `db:"ref=type:REF_ONE,src:OwnerID"`
 	Remark  string
 }
 
@@ -945,16 +945,55 @@ res.All(&users)
 <a name="B0tvR"></a>
 ## 引用变更
 
-引用变更的语法稍复杂些，需按情况处理。
+引用变更有以下三种场景：
 
-针对`拥有一个(HAS_ONE)`和`引用一个(ASSC_ONE)`： 直接删掉其引用关系即可。
+- 引用替换（`ASSOC_REPLACE`）：使用传入档案或列表覆盖数据库记录；
+- 引用合并（`ASSOC_MERGE`）：将传入档案或列表并入数据库记录；
+- 引用删除（`ASSOC_REMOVE`）：将传入档案或列表删除，其余引用记录不做处理。
+
+基本语法如下：
+
+```go
+doc := &User{
+	Username: "Foo", 
+	IDCard: &IDCard{
+		CardNum: "440106200001013519"
+    }
+}
+res := db.Model("User").Find("ID", "507c7f79bcf86cd7994f6c0e").UpdateOne(
+	doc, 
+	db.WithUpdateOptionAssocType("IDCard", "ASSOC_MERGE"),
+)
+```
+
+注意：
+- 在拥有关系（`HAS_XXX`）中，由于主模型对子模型拥有读写权，所以框架底层会自动完成对子模型的增删改；
+- 引用变更时，框架底层将会自动基于传入数据进行增删改；
+  - 引用档案无主键值，则自动新增；
+  - 引用档案有主键值和其他字段值，则自动更新；
+  - 引用删除时，默认只会删除引用关系，并不会删除子档案本身。
+
+如需在删除关系的同时一并删子档案，需额外指定`db.WithXxxOptionDeleteAssocs()`参数：
+
+```go
+res := db.Model("User").Find("ID", "507c7f79bcf86cd7994f6c0e").UpdateOne(
+	&User{
+		Username: "Foo", 
+		IDCard: &IDCard{
+			ID: "4700f79bcf86cd7994f6c0e"
+		}
+	}, 
+	db.WithUpdateOptionAssocType("IDCard", "ASSOC_DELETE"),
+	db.WithUpdateOptionDeleteAssocs(),
+)
+```
 
 
-针对`拥有一个(HAS_MANY)`和`引用一个(ASSC_MANY)`有以下三种细分场景：
+### 拥有一个
 
-1. 引用替换（`ASSOC_REPLACE`）：使用传入列表覆盖数据库列表；
-1. 引用合并（`ASSOC_MERGE`）：将传入列表合并至数据库列表；
-1. 引用删除（`ASSOC_REMOVE`）：仅删除传入列表的数据。
+### 引用一个
 
-注意：在拥有关系中，由于主模型对子模型拥有读写权，但在默认情况下，我们在引用删除时也只会删除其引用关系，并不会删除子档案本身，如需在删除关系的同时一并删子档案，需额外指定`DeleteObjects`参数实现。
+### 拥有多个
+
+### 引用多个
 

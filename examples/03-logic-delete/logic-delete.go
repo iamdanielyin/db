@@ -56,7 +56,7 @@ func main() {
 			FirstName: "Steve",
 			LastName:  "Jobs",
 		},
-	}); err != nil {
+	}, db.WithInsertOptionLooseMode()); err != nil {
 		log.Fatalf("新增数据失败：%v\n", err)
 	} else {
 		log.Printf("新增数据成功：%v\n", res.StringIDs())

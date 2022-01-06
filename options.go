@@ -1,29 +1,117 @@
 package db
 
 const (
-	AssociationActionReplace = "REPLACE"
-	AssociationActionMerge   = "MERGE"
-	AssociationActionRemove  = "REMOVE"
+	AssocTypeReplace = "ASSOC_REPLACE"
+	AssocTypeMerge   = "ASSOC_MERGE"
+	AssocTypeRemove  = "ASSOC_REMOVE"
 )
 
-type AssociationOption struct {
-	Field              string
-	Action             string
-	DisableAutoCreate  bool
-	DisableAutoUpdate  bool
-	DisableAutoRemove  bool
-	DeleteAssociations bool
+func ensureInsertAssocTypeMap(opts *InsertOptions) *InsertOptions {
+	if opts != nil {
+		if opts.AssocTypeMap == nil {
+			opts.AssocTypeMap = make(map[string]string)
+		}
+	}
+	return opts
+}
+
+func ensureUpdateAssocTypeMap(opts *UpdateOptions) *UpdateOptions {
+	if opts != nil {
+		if opts.AssocTypeMap == nil {
+			opts.AssocTypeMap = make(map[string]string)
+		}
+	}
+	return opts
+}
+
+func ensureDeleteAssocTypeMap(opts *DeleteOptions) *DeleteOptions {
+	if opts != nil {
+		if opts.AssocTypeMap == nil {
+			opts.AssocTypeMap = make(map[string]string)
+		}
+	}
+	return opts
+}
+
+func WithInsertOptionAssocType(fieldName string, typeValue string) func(opts *InsertOptions) {
+	return func(opts *InsertOptions) {
+		ensureInsertAssocTypeMap(opts).AssocTypeMap[fieldName] = typeValue
+	}
+}
+
+func WithUpdateOptionAssocType(fieldName string, typeValue string) func(opts *UpdateOptions) {
+	return func(opts *UpdateOptions) {
+		ensureUpdateAssocTypeMap(opts).AssocTypeMap[fieldName] = typeValue
+	}
+}
+
+func WithDeleteOptionAssocType(fieldName string, typeValue string) func(opts *DeleteOptions) {
+	return func(opts *DeleteOptions) {
+		ensureDeleteAssocTypeMap(opts).AssocTypeMap[fieldName] = typeValue
+	}
+}
+
+func WithInsertOptionLooseMode(v bool) func(opts *InsertOptions) {
+	return func(opts *InsertOptions) {
+		ensureInsertAssocTypeMap(opts).LooseMode = v
+	}
+}
+
+func WithUpdateOptionLooseMode(v ...bool) func(opts *UpdateOptions) {
+	return func(opts *UpdateOptions) {
+		if len(v) > 0 {
+			ensureUpdateAssocTypeMap(opts).LooseMode = v[0]
+		} else {
+			ensureUpdateAssocTypeMap(opts).LooseMode = true
+		}
+	}
+}
+
+func WithInsertOptionDeleteAssocs(v ...bool) func(opts *InsertOptions) {
+	return func(opts *InsertOptions) {
+		if len(v) > 0 {
+			ensureInsertAssocTypeMap(opts).DeleteAssocs = v[0]
+		} else {
+			ensureInsertAssocTypeMap(opts).DeleteAssocs = true
+		}
+	}
+}
+
+func WithUpdateOptionDeleteAssocs(v ...bool) func(opts *UpdateOptions) {
+	return func(opts *UpdateOptions) {
+		if len(v) > 0 {
+			ensureUpdateAssocTypeMap(opts).DeleteAssocs = v[0]
+		} else {
+			ensureUpdateAssocTypeMap(opts).DeleteAssocs = true
+		}
+	}
+}
+
+func WithDeleteOptionDeleteAssocs(v ...bool) func(opts *DeleteOptions) {
+	return func(opts *DeleteOptions) {
+		if len(v) > 0 {
+			ensureDeleteAssocTypeMap(opts).DeleteAssocs = v[0]
+		} else {
+			ensureDeleteAssocTypeMap(opts).DeleteAssocs = true
+		}
+	}
 }
 
 type InsertOptions struct {
+	AssocTypeMap map[string]string
+	LooseMode    bool
+	DeleteAssocs bool
 }
 
 type UpdateOptions struct {
-	AssocOptions []*AssociationOption
+	AssocTypeMap map[string]string
+	LooseMode    bool
+	DeleteAssocs bool
 }
 
 type DeleteOptions struct {
-	AssocOptions []*AssociationOption
+	AssocTypeMap map[string]string
+	DeleteAssocs bool
 }
 
 type PreloadOptions struct {

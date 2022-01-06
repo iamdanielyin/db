@@ -1,10 +1,10 @@
 package db
 
 const (
-	RelationshipHasOne        = "HAS_ONE"
-	RelationshipHasMany       = "HAS_MANY"
-	RelationshipAssociateOne  = "ASSC_ONE"
-	RelationshipAssociateMany = "ASSC_MANY"
+	RelationshipHasOne  = "HAS_ONE"
+	RelationshipHasMany = "HAS_MANY"
+	RelationshipRefOne  = "REF_ONE"
+	RelationshipRefMany = "REF_MANY"
 )
 
 type Relationship struct {
