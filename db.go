@@ -6,23 +6,28 @@ type DataSource struct {
 	URI     string `valid:"required,!empty"`
 }
 
-func HasSession(name string) bool {
-	connMapMu.RLock()
-	defer connMapMu.RUnlock()
-
-	_, has := connMap[name]
-	return has
-}
-
-func Session(name string) *Connection {
+func LookupSession(name string) (*Connection, bool) {
 	connMapMu.RLock()
 	defer connMapMu.RUnlock()
 
 	conn, has := connMap[name]
-	if !has || conn == nil {
+	return conn, has
+}
+
+func Session(name string) *Connection {
+	conn, has := LookupSession(name)
+	if !has {
 		panic(Errorf(`missing session: %s`, name))
 	}
 	return conn
+}
+
+func Raw(name string, raw string, values ...interface{}) error {
+	conn, has := LookupSession(name)
+	if has {
+		return conn.Raw(raw, values...)
+	}
+	return Errorf(`missing session: %s`, name)
 }
 
 func HasModel(name string) bool {

@@ -1,7 +1,7 @@
 package db
 
 func registerCreateCallbacks(callbacks *clientWrapper) *clientWrapper {
-	processor := callbacks.Create()
+	processor := callbacks.CreateProcessors()
 	processor.Register("db:begin_transaction", beginTransactionCallback)
 	processor.Register("db:before_create", beforeCreateCallback)
 	processor.Register("db:create", createCallback)

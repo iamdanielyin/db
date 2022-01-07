@@ -11,6 +11,7 @@ type Client interface {
 	Name() string
 	Logger() Logger
 	Source() DataSource
+	Raw(string, ...interface{}) error
 	Disconnect(context.Context) error
 	StartTransaction() (Tx, error)
 	WithTransaction(func(Tx) error) error

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 )
@@ -54,6 +53,10 @@ func (cs *clientWrapper) Source() DataSource {
 	return cs.rawClient.Source()
 }
 
+func (cs *clientWrapper) Raw(raw string, values ...interface{}) error {
+	return cs.rawClient.Raw(raw, values...)
+}
+
 func (cs *clientWrapper) Disconnect(ctx context.Context) error {
 	return cs.rawClient.Disconnect(ctx)
 }
@@ -98,29 +101,35 @@ func (cc *callbacksCollection) Session() *Connection {
 	return cc.rawColl.Session()
 }
 
-func (cc *callbacksCollection) InsertOne(i interface{}, opts ...*InsertOptions) (InsertOneResult, error) {
+func (cc *callbacksCollection) InsertOne(i interface{}, fns ...func(*InsertOptions)) (InsertOneResult, error) {
 	scope := &Scope{
 		Action:       ActionInsertOne,
 		InsertOneDoc: i,
 		Coll:         cc.rawColl,
 	}
-	if len(opts) > 0 && opts[0] != nil {
-		scope.InsertOptions = opts[0]
+	if len(fns) > 0 && fns[0] != nil {
+		scope.InsertOptions = new(InsertOptions)
+		for _, fn := range fns {
+			fn(scope.InsertOptions)
+		}
 	}
-	cc.client.Create().Execute(cc.NewScope(scope))
+	cc.client.CreateProcessors().Execute(cc.NewScope(scope))
 	return scope.InsertOneResult, scope.Error
 }
 
-func (cc *callbacksCollection) InsertMany(i interface{}, opts ...*InsertOptions) (InsertManyResult, error) {
+func (cc *callbacksCollection) InsertMany(i interface{}, fns ...func(*InsertOptions)) (InsertManyResult, error) {
 	scope := &Scope{
 		Action:         ActionInsertMany,
 		InsertManyDocs: i,
 		Coll:           cc.rawColl,
 	}
-	if len(opts) > 0 && opts[0] != nil {
-		scope.InsertOptions = opts[0]
+	if len(fns) > 0 && fns[0] != nil {
+		scope.InsertOptions = new(InsertOptions)
+		for _, fn := range fns {
+			fn(scope.InsertOptions)
+		}
 	}
-	cc.client.Create().Execute(cc.NewScope(scope))
+	cc.client.CreateProcessors().Execute(cc.NewScope(scope))
 	return scope.InsertManyResult, scope.Error
 }
 
@@ -224,22 +233,12 @@ func (cr *callbacksResult) Unscoped() Result {
 	return cr
 }
 
-func (cr *callbacksResult) Preload(i interface{}) Result {
-	var opts *PreloadOptions
-	switch v := i.(type) {
-	case string:
-		opts = &PreloadOptions{
-			Path: v,
+func (cr *callbacksResult) Preload(path string, fns ...func(options *PreloadOptions)) Result {
+	if path != "" && len(fns) > 0 {
+		if cr.scope.Preloads == nil {
+			cr.scope.Preloads = make(map[string][]func(options *PreloadOptions))
 		}
-	case *PreloadOptions:
-		opts = v
-	case PreloadOptions:
-		opts = &v
-	}
-	if opts != nil {
-		if opts.Path = strings.TrimSpace(opts.Path); opts.Path != "" {
-			cr.scope.PreloadsOptions = append(cr.scope.PreloadsOptions, opts)
-		}
+		cr.scope.Preloads[path] = fns
 	}
 	return cr
 }
@@ -247,26 +246,26 @@ func (cr *callbacksResult) Preload(i interface{}) Result {
 func (cr *callbacksResult) One(dst interface{}) error {
 	cr.scope.Dest = dst
 	cr.scope.Action = ActionQueryOne
-	cr.cc.client.Query().Execute(cr.cc.NewScope(cr.scope))
+	cr.cc.client.QueryProcessors().Execute(cr.cc.NewScope(cr.scope))
 	return cr.scope.Error
 }
 
 func (cr *callbacksResult) All(dst interface{}) error {
 	cr.scope.Dest = dst
 	cr.scope.Action = ActionQueryAll
-	cr.cc.client.Query().Execute(cr.cc.NewScope(cr.scope))
+	cr.cc.client.QueryProcessors().Execute(cr.cc.NewScope(cr.scope))
 	return cr.scope.Error
 }
 
 func (cr *callbacksResult) Cursor() (Cursor, error) {
 	cr.scope.Action = ActionQueryCursor
-	cr.cc.client.Query().Execute(cr.cc.NewScope(cr.scope))
+	cr.cc.client.QueryProcessors().Execute(cr.cc.NewScope(cr.scope))
 	return &callbacksCursor{cr: cr, rawCursor: cr.scope.Cursor}, cr.scope.Error
 }
 
 func (cr *callbacksResult) Count() (int, error) {
 	cr.scope.Action = ActionQueryCount
-	cr.cc.client.Query().Execute(cr.cc.NewScope(cr.scope))
+	cr.cc.client.QueryProcessors().Execute(cr.cc.NewScope(cr.scope))
 	return cr.scope.TotalRecords, cr.scope.Error
 }
 
@@ -276,45 +275,57 @@ func (cr *callbacksResult) TotalRecords() (int, error) {
 
 func (cr *callbacksResult) TotalPages() (int, error) {
 	cr.scope.Action = ActionQueryPage
-	cr.cc.client.Query().Execute(cr.cc.NewScope(cr.scope))
+	cr.cc.client.QueryProcessors().Execute(cr.cc.NewScope(cr.scope))
 	return cr.scope.TotalPages, cr.scope.Error
 }
 
-func (cr *callbacksResult) UpdateOne(i interface{}, opts ...*UpdateOptions) (int, error) {
+func (cr *callbacksResult) UpdateOne(i interface{}, fns ...func(*UpdateOptions)) (int, error) {
 	cr.scope.Action = ActionUpdateOne
 	cr.scope.UpdateDoc = i
-	if len(opts) > 0 && opts[0] != nil {
-		cr.scope.UpdateOptions = opts[0]
+	if len(fns) > 0 && fns[0] != nil {
+		cr.scope.UpdateOptions = new(UpdateOptions)
+		for _, fn := range fns {
+			fn(cr.scope.UpdateOptions)
+		}
 	}
-	cr.cc.client.Update().Execute(cr.cc.NewScope(cr.scope))
+	cr.cc.client.UpdateProcessors().Execute(cr.cc.NewScope(cr.scope))
 	return cr.scope.RecordsAffected, cr.scope.Error
 }
 
-func (cr *callbacksResult) UpdateMany(i interface{}, opts ...*UpdateOptions) (int, error) {
+func (cr *callbacksResult) UpdateMany(i interface{}, fns ...func(*UpdateOptions)) (int, error) {
 	cr.scope.Action = ActionUpdateMany
 	cr.scope.UpdateDoc = i
-	if len(opts) > 0 && opts[0] != nil {
-		cr.scope.UpdateOptions = opts[0]
+	if len(fns) > 0 && fns[0] != nil {
+		cr.scope.UpdateOptions = new(UpdateOptions)
+		for _, fn := range fns {
+			fn(cr.scope.UpdateOptions)
+		}
 	}
-	cr.cc.client.Update().Execute(cr.cc.NewScope(cr.scope))
+	cr.cc.client.UpdateProcessors().Execute(cr.cc.NewScope(cr.scope))
 	return cr.scope.RecordsAffected, cr.scope.Error
 }
 
-func (cr *callbacksResult) DeleteOne(opts ...*DeleteOptions) (int, error) {
+func (cr *callbacksResult) DeleteOne(fns ...func(*DeleteOptions)) (int, error) {
 	cr.scope.Action = ActionDeleteOne
-	if len(opts) > 0 && opts[0] != nil {
-		cr.scope.DeleteOptions = opts[0]
+	if len(fns) > 0 && fns[0] != nil {
+		cr.scope.DeleteOptions = new(DeleteOptions)
+		for _, fn := range fns {
+			fn(cr.scope.DeleteOptions)
+		}
 	}
-	cr.cc.client.Delete().Execute(cr.cc.NewScope(cr.scope))
+	cr.cc.client.DeleteProcessors().Execute(cr.cc.NewScope(cr.scope))
 	return cr.scope.RecordsAffected, cr.scope.Error
 }
 
-func (cr *callbacksResult) DeleteMany(opts ...*DeleteOptions) (int, error) {
+func (cr *callbacksResult) DeleteMany(fns ...func(*DeleteOptions)) (int, error) {
 	cr.scope.Action = ActionDeleteMany
-	if len(opts) > 0 && opts[0] != nil {
-		cr.scope.DeleteOptions = opts[0]
+	if len(fns) > 0 && fns[0] != nil {
+		cr.scope.DeleteOptions = new(DeleteOptions)
+		for _, fn := range fns {
+			fn(cr.scope.DeleteOptions)
+		}
 	}
-	cr.cc.client.Delete().Execute(cr.cc.NewScope(cr.scope))
+	cr.cc.client.DeleteProcessors().Execute(cr.cc.NewScope(cr.scope))
 	return cr.scope.RecordsAffected, cr.scope.Error
 }
 
@@ -328,7 +339,6 @@ func (c *callbacksCursor) HasNext() bool {
 }
 
 func (c *callbacksCursor) Next(dst interface{}) error {
-	// TODO PreloadRefs
 	return c.rawCursor.Next(dst)
 }
 
@@ -353,27 +363,27 @@ type callback struct {
 	processor *processor
 }
 
-func (cs *clientWrapper) Create() *processor {
+func (cs *clientWrapper) CreateProcessors() *processor {
 	return cs.processors["create"]
 }
 
-func (cs *clientWrapper) Query() *processor {
+func (cs *clientWrapper) QueryProcessors() *processor {
 	return cs.processors["query"]
 }
 
-func (cs *clientWrapper) Update() *processor {
+func (cs *clientWrapper) UpdateProcessors() *processor {
 	return cs.processors["update"]
 }
 
-func (cs *clientWrapper) Delete() *processor {
+func (cs *clientWrapper) DeleteProcessors() *processor {
 	return cs.processors["delete"]
 }
 
-func (cs *clientWrapper) Row() *processor {
+func (cs *clientWrapper) RowProcessors() *processor {
 	return cs.processors["row"]
 }
 
-func (cs *clientWrapper) Raw() *processor {
+func (cs *clientWrapper) RawProcessors() *processor {
 	return cs.processors["raw"]
 }
 

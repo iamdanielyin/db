@@ -4,11 +4,10 @@ import (
 	"github.com/iamdanielyin/structs"
 	"log"
 	"reflect"
-	"strings"
 )
 
 func registerQueryCallbacks(callbacks *clientWrapper) *clientWrapper {
-	processor := callbacks.Query()
+	processor := callbacks.QueryProcessors()
 	processor.Register("db:before_query", beforeQueryCallback)
 	processor.Register("db:query", queryCallback)
 	processor.Register("db:preload", preloadCallback)
@@ -43,46 +42,7 @@ func queryCallback(s *Scope) {
 }
 
 func preloadCallback(scope *Scope) {
-	if len(scope.PreloadsOptions) == 0 || (scope.Action != ActionQueryOne && scope.Action != ActionQueryAll) {
-		return
-	}
-	for _, preloadItem := range scope.PreloadsOptions {
-		preloadFields := strings.Split(preloadItem.Path, ".")
-		meta := &scope.Metadata
-		for _, preloadFieldName := range preloadFields {
-			if meta == nil {
-				break
-			}
-			field, has := meta.FieldByName(preloadFieldName)
-			if !has {
-				break
-			}
-			var opts *PreloadOptions
-			if len(preloadFields) > 1 {
-				opts = &PreloadOptions{
-					Path: preloadFieldName,
-				}
-			} else {
-				opts = &PreloadOptions{
-					Path:     preloadFieldName,
-					Select:   preloadItem.Select,
-					OrderBys: preloadItem.OrderBys,
-					Page:     preloadItem.Page,
-					Size:     preloadItem.Size,
-				}
-			}
-			if err := preloadField(scope.Dest, meta, opts, scope.Session); err != nil {
-				scope.AddError(err)
-				break
-			}
-			if v, err := LookupMetadata(field.Relationship.MetadataName); err != nil {
-				scope.AddError(err)
-				break
-			} else {
-				meta = &v
-			}
-		}
-	}
+	// 待实现
 }
 
 func preloadField(value interface{}, meta *Metadata, opts *PreloadOptions, sess *Connection) error {

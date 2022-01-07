@@ -30,15 +30,15 @@ type ConnectOptions struct {
 	Logger Logger
 }
 
-func (c *Connection) Client() Client {
+func (c Connection) Client() Client {
 	return c.client
 }
 
-func (c *Connection) Logger() Logger {
+func (c Connection) Logger() Logger {
 	return c.logger
 }
 
-func (c *Connection) Model(name string) Collection {
+func (c Connection) Model(name string) Collection {
 	meta, err := LookupMetadata(name)
 	if err != nil {
 		panic(err)
@@ -46,15 +46,19 @@ func (c *Connection) Model(name string) Collection {
 	return meta.Session().Client().Model(meta)
 }
 
-func (c *Connection) Disconnect() error {
+func (c Connection) Disconnect() error {
 	return c.client.Disconnect(context.Background())
 }
 
-func (c *Connection) StartTransaction() (Tx, error) {
+func (c Connection) Raw(raw string, values ...interface{}) error {
+	return c.client.Raw(raw, values...)
+}
+
+func (c Connection) StartTransaction() (Tx, error) {
 	return c.client.StartTransaction()
 }
 
-func (c *Connection) WithTransaction(fn func(Tx) error) error {
+func (c Connection) WithTransaction(fn func(Tx) error) error {
 	return c.client.WithTransaction(fn)
 }
 
@@ -125,7 +129,7 @@ func Disconnect(names ...string) error {
 	return nil
 }
 
-func (c *Connection) RegisterMetadata(metaOrStructs ...interface{}) error {
+func (c Connection) RegisterMetadata(metaOrStructs ...interface{}) error {
 	for _, item := range metaOrStructs {
 		if err := c.registerMetadata(item); err != nil {
 			return err
@@ -134,7 +138,7 @@ func (c *Connection) RegisterMetadata(metaOrStructs ...interface{}) error {
 	return nil
 }
 
-func (c *Connection) registerMetadata(metaOrStruct interface{}) error {
+func (c Connection) registerMetadata(metaOrStruct interface{}) error {
 	if metaOrStruct == nil {
 		return nil
 	}
@@ -155,7 +159,7 @@ func (c *Connection) registerMetadata(metaOrStruct interface{}) error {
 		}
 		metadata = *parsed
 	}
-	metadata.source = c
+	metadata.source = &c
 	metadata.Properties = metadata.Properties.updateFieldNames()   // 先更新field.Name
 	metadata.nativeProperties = metadata.Properties.nativeFields() // 再计算nativeProperties
 	// 校验结构体

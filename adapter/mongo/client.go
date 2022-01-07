@@ -19,6 +19,11 @@ type mongoClient struct {
 	logger  db.Logger
 }
 
+func (c *mongoClient) Raw(s string, i ...interface{}) error {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (c *mongoClient) StartTransaction() (db.Tx, error) {
 	opts := options.Session().SetDefaultReadConcern(readconcern.Majority())
 	sess, err := c.client.StartSession(opts)

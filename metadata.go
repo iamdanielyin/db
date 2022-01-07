@@ -154,7 +154,7 @@ func RegisterMetadata(sourceName string, metadata ...interface{}) error {
 	if sourceName == "" {
 		return Errorf("missing data source name")
 	}
-	if !HasSession(sourceName) {
+	if _, has := LookupSession(sourceName); !has {
 		return Errorf(`unconnected data source "%s"`, sourceName)
 	}
 	return Session(sourceName).RegisterMetadata(metadata...)

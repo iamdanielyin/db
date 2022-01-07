@@ -17,7 +17,7 @@ type Scope struct {
 	Session          *Connection
 	Metadata         Metadata
 	Conditions       []Conditional
-	PreloadsOptions  []*PreloadOptions
+	Preloads         map[string][]func(options *PreloadOptions)
 	Projection       []string
 	Action           string
 	OrderBys         []string

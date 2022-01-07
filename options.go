@@ -57,43 +57,27 @@ func WithInsertOptionLooseMode(v bool) func(opts *InsertOptions) {
 	}
 }
 
-func WithUpdateOptionLooseMode(v ...bool) func(opts *UpdateOptions) {
+func WithUpdateOptionLooseMode(v bool) func(opts *UpdateOptions) {
 	return func(opts *UpdateOptions) {
-		if len(v) > 0 {
-			ensureUpdateAssocTypeMap(opts).LooseMode = v[0]
-		} else {
-			ensureUpdateAssocTypeMap(opts).LooseMode = true
-		}
+		ensureUpdateAssocTypeMap(opts).LooseMode = v
 	}
 }
 
-func WithInsertOptionDeleteAssocs(v ...bool) func(opts *InsertOptions) {
+func WithInsertOptionDeleteAssocs(v bool) func(opts *InsertOptions) {
 	return func(opts *InsertOptions) {
-		if len(v) > 0 {
-			ensureInsertAssocTypeMap(opts).DeleteAssocs = v[0]
-		} else {
-			ensureInsertAssocTypeMap(opts).DeleteAssocs = true
-		}
+		ensureInsertAssocTypeMap(opts).DeleteAssocs = v
 	}
 }
 
-func WithUpdateOptionDeleteAssocs(v ...bool) func(opts *UpdateOptions) {
+func WithUpdateOptionDeleteAssocs(v bool) func(opts *UpdateOptions) {
 	return func(opts *UpdateOptions) {
-		if len(v) > 0 {
-			ensureUpdateAssocTypeMap(opts).DeleteAssocs = v[0]
-		} else {
-			ensureUpdateAssocTypeMap(opts).DeleteAssocs = true
-		}
+		ensureUpdateAssocTypeMap(opts).DeleteAssocs = v
 	}
 }
 
-func WithDeleteOptionDeleteAssocs(v ...bool) func(opts *DeleteOptions) {
+func WithDeleteOptionDeleteAssocs(v bool) func(opts *DeleteOptions) {
 	return func(opts *DeleteOptions) {
-		if len(v) > 0 {
-			ensureDeleteAssocTypeMap(opts).DeleteAssocs = v[0]
-		} else {
-			ensureDeleteAssocTypeMap(opts).DeleteAssocs = true
-		}
+		ensureDeleteAssocTypeMap(opts).DeleteAssocs = v
 	}
 }
 

@@ -1,7 +1,7 @@
 package db
 
 func registerUpdateCallbacks(callbacks *clientWrapper) *clientWrapper {
-	processor := callbacks.Update()
+	processor := callbacks.UpdateProcessors()
 	processor.Register("db:begin_transaction", beginTransactionCallback)
 	processor.Register("db:before_update", beforeUpdateCallback)
 	processor.Register("db:update", updateCallback)

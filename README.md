@@ -58,11 +58,11 @@ type Member struct {
 	LastName  string
 }
 
-func main() {
-	// 连接数据源
+func main() { 
+	// 连接数据源 
 	sess, err := db.Connect(db.DataSource{
-		Name:    "test",
-		Adapter: "mongo",
+		Name:    "test", 
+		Adapter: "mongo", 
 		URI:     "mongodb://admin:123456@localhost/test",
 	})
 	if err != nil {
@@ -87,7 +87,7 @@ func main() {
 			LastName:  "Jobs",
 		},
 	})
-    fmt.Println(res.StringIDs())
+	fmt.Println(res.StringIDs())
 
 	// 查询数据
 	var member Member
@@ -951,6 +951,8 @@ res.All(&users)
 - 引用合并（`ASSOC_MERGE`）：将传入档案或列表并入数据库记录；
 - 引用删除（`ASSOC_REMOVE`）：将传入档案或列表删除，其余引用记录不做处理。
 
+注意：当传入数据涉及变更时却又未指定引用类型时，默认值为`ASSOC_REPLACE`。
+ 
 基本语法如下：
 
 ```go
@@ -971,9 +973,9 @@ res := db.Model("User").Find("ID", "507c7f79bcf86cd7994f6c0e").UpdateOne(
 - 引用变更时，框架底层将会自动基于传入数据进行增删改；
   - 引用档案无主键值，则自动新增；
   - 引用档案有主键值和其他字段值，则自动更新；
-  - 引用删除时，默认只会删除引用关系，并不会删除子档案本身。
+  - 引用删除时，默认只会删除引用关系，并不会删除子档案本身。如需在删除关系的同时一并删子档案，需额外指定`db.WithXxxOptionDeleteAssocs()`参数。
 
-如需在删除关系的同时一并删子档案，需额外指定`db.WithXxxOptionDeleteAssocs()`参数：
+完整示例如下：
 
 ```go
 res := db.Model("User").Find("ID", "507c7f79bcf86cd7994f6c0e").UpdateOne(
@@ -981,19 +983,37 @@ res := db.Model("User").Find("ID", "507c7f79bcf86cd7994f6c0e").UpdateOne(
 		Username: "Foo", 
 		IDCard: &IDCard{
 			ID: "4700f79bcf86cd7994f6c0e"
-		}
+		},
+		BankCards: []BankCard{
+			{
+				ID: "53102b43bf1044ed8b0ba36b"
+			},
+			{
+				ID: "53102b43bf1044ed8b0ba36b", 
+				Remark: "常用卡"
+			},
+			{
+				CardNum: "6228481234040908147"
+			},
+		}, 
+		Company: &Company{
+			ID: "4566f79bcf86cd7994f5412"
+		}, 
+		Projects: []Project{
+			{
+				ID: "8541f79bcf86cd7994f0001",
+			},
+			{
+				ID: "8541f79bcf86cd7994f0002",
+			},
+			{
+				ID: "8541f79bcf86cd7994f0003",
+			},
+		},
 	}, 
-	db.WithUpdateOptionAssocType("IDCard", "ASSOC_DELETE"),
-	db.WithUpdateOptionDeleteAssocs(),
+	db.WithUpdateOptionAssocType("IDCard", "ASSOC_REPLACE"),
+	db.WithUpdateOptionAssocType("BankCards", "ASSOC_REPLACE"),
+	db.WithUpdateOptionAssocType("Company", "ASSOC_REMOVE"), 
+	db.WithUpdateOptionAssocType("Projects", "ASSOC_REPLACE"),
 )
 ```
-
-
-### 拥有一个
-
-### 引用一个
-
-### 拥有多个
-
-### 引用多个
-
