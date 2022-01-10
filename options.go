@@ -4,6 +4,7 @@ const (
 	AssocTypeReplace = "ASSOC_REPLACE"
 	AssocTypeMerge   = "ASSOC_MERGE"
 	AssocTypeRemove  = "ASSOC_REMOVE"
+	AssocTypeClear   = "ASSOC_CLEAR"
 )
 
 func ensureInsertAssocTypeMap(opts *InsertOptions) *InsertOptions {
